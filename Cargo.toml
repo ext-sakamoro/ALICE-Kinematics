@@ -1,0 +1,28 @@
+[package]
+name = "alice-kinematics"
+version = "0.1.0"
+edition = "2021"
+authors = ["Moroya Sakamoto"]
+description = "Human motion intent compression — 1000Hz raw coordinates → 8-byte kinematic intent"
+license = "MIT"
+repository = "https://github.com/ext-sakamoro/ALICE-Kinematics"
+keywords = ["kinematics", "motion-capture", "compression", "no_std", "vr"]
+categories = ["no-std", "compression", "game-development"]
+
+[features]
+default = []
+std = []
+# AGPL-3.0 licensed encoder modules
+# Activating this feature includes code licensed under AGPL-3.0.
+# See LICENSE-AGPL for details.
+encoder = []
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.bench]
+inherits = "release"
