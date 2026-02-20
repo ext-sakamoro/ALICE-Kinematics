@@ -23,14 +23,17 @@ impl Vec3k {
         Self { x, y, z }
     }
 
+    #[inline(always)]
     pub fn length_sq(self) -> f32 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
+    #[inline(always)]
     pub fn length(self) -> f32 {
         fast_sqrt(self.length_sq())
     }
 
+    #[inline(always)]
     pub fn normalize(self) -> Self {
         let len = self.length();
         if len < 1e-10 {
@@ -40,6 +43,7 @@ impl Vec3k {
         Self { x: self.x * inv, y: self.y * inv, z: self.z * inv }
     }
 
+    #[inline(always)]
     pub fn dot(self, other: Self) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
@@ -324,6 +328,7 @@ fn sin_cos_approx(theta: f32) -> (f32, f32) {
 }
 
 /// Fast sine approximation (Bhaskara I, max error ~0.2%)
+#[inline(always)]
 fn sin_approx(x: f32) -> f32 {
     let pi = core::f32::consts::PI;
     let mut x = x % (2.0 * pi);
@@ -334,7 +339,9 @@ fn sin_approx(x: f32) -> f32 {
 
     let num = 16.0 * x * (pi - x);
     let den = 5.0 * pi * pi - 4.0 * x * (pi - x);
-    sign * num / den
+    // den is always non-zero for x in [0, pi]
+    let inv_den = 1.0 / den;
+    sign * num * inv_den
 }
 
 /// Fast acos approximation (Abramowitz & Stegun)

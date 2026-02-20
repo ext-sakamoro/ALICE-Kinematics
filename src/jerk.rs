@@ -88,7 +88,8 @@ impl JerkFitter {
         let s2 = self.get_sample(self.count - 1);
         let dt = s2.time - s1.time;
         if dt < 1e-6 { return Vec3k::ZERO; }
-        (s2.pos - s1.pos).scale(1.0 / dt)
+        let inv_dt = 1.0 / dt;
+        (s2.pos - s1.pos).scale(inv_dt)
     }
 
     /// Compute current acceleration from recent samples
@@ -104,10 +105,13 @@ impl JerkFitter {
         let dt2 = s2.time - s1.time;
         if dt1 < 1e-6 || dt2 < 1e-6 { return Vec3k::ZERO; }
 
-        let v1 = (s1.pos - s0.pos).scale(1.0 / dt1);
-        let v2 = (s2.pos - s1.pos).scale(1.0 / dt2);
-        let avg_dt = (dt1 + dt2) / 2.0;
-        (v2 - v1).scale(1.0 / avg_dt)
+        let inv_dt1 = 1.0 / dt1;
+        let inv_dt2 = 1.0 / dt2;
+        let v1 = (s1.pos - s0.pos).scale(inv_dt1);
+        let v2 = (s2.pos - s1.pos).scale(inv_dt2);
+        // avg_dt = (dt1 + dt2) * 0.5 → inv = 2.0 / (dt1 + dt2)
+        let inv_avg_dt = 2.0 / (dt1 + dt2);
+        (v2 - v1).scale(inv_avg_dt)
     }
 
     /// Detect if motion has started (velocity exceeds threshold)
@@ -161,7 +165,8 @@ impl JerkFitter {
             let err = pred.distance(s.pos);
             total_error += err * err;
         }
-        let rmse = fast_sqrt_jerk(total_error / self.count as f32);
+        let inv_count = 1.0 / self.count as f32;
+        let rmse = fast_sqrt_jerk(total_error * inv_count);
 
         Some(FitResult {
             target,
@@ -219,9 +224,11 @@ pub fn minimum_jerk_cost(displacement: f32, duration: f32) -> f32 {
 ///
 /// MT = a + b * log2(2D/W)
 /// where MT = movement time, D = distance, W = target width
+#[inline(always)]
 pub fn fitts_law_duration(distance: f32, target_width: f32, a: f32, b: f32) -> f32 {
     if target_width < 1e-6 { return a + b * 10.0; }
-    let id = log2_approx(2.0 * distance / target_width);
+    let inv_w = 1.0 / target_width;
+    let id = log2_approx(2.0 * distance * inv_w);
     a + b * id
 }
 

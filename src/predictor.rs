@@ -36,27 +36,30 @@ impl QuinticCoeffs {
             return Self { c: [xf, 0.0, 0.0, 0.0, 0.0, 0.0] };
         }
         let t2 = t * t;
-        let t3 = t2 * t;
-        let t4 = t3 * t;
-        let t5 = t4 * t;
+
+        // Precompute reciprocals to replace repeated divisions
+        let inv_t  = 1.0 / t;
+        let inv_t2 = inv_t * inv_t;
+        let inv_t3 = inv_t2 * inv_t;
+        let inv_t4 = inv_t3 * inv_t;
+        let inv_t5 = inv_t4 * inv_t;
 
         // Boundary conditions: vf = 0, af = 0 (rest-to-rest or moving-to-rest)
         let c0 = x0;
         let c1 = v0;
-        let c2 = a0 / 2.0;
+        let c2 = a0 * 0.5;
 
         // Solve for c3, c4, c5 from endpoint conditions
-        let dx = xf - x0 - v0 * t - (a0 / 2.0) * t2;
-        let c3 = (10.0 * dx) / t3 - (4.0 * v0 + a0 * t) / t2 + a0 / (2.0 * t);
-        let c4 = (-15.0 * dx) / t4 + (7.0 * v0 + 2.0 * a0 * t) / t3 - a0 / t2;
-        let c5 = (6.0 * dx) / t5 - (3.0 * v0 + a0 * t) / t4 + a0 / (2.0 * t3);
+        let dx = xf - x0 - v0 * t - c2 * t2;
+        let c3 = 10.0 * dx * inv_t3 - (4.0 * v0 + a0 * t) * inv_t2 + a0 * 0.5 * inv_t;
+        let c4 = -15.0 * dx * inv_t4 + (7.0 * v0 + 2.0 * a0 * t) * inv_t3 - a0 * inv_t2;
+        let c5 = 6.0 * dx * inv_t5 - (3.0 * v0 + a0 * t) * inv_t4 + a0 * 0.5 * inv_t3;
 
-        // Simplify: for rest-to-rest (v0=0, a0=0):
-        // c3 = 10*dx/T³, c4 = -15*dx/T⁴, c5 = 6*dx/T⁵
         Self { c: [c0, c1, c2, c3, c4, c5] }
     }
 
     /// Evaluate position at time t
+    #[inline(always)]
     pub fn position(&self, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
@@ -67,6 +70,7 @@ impl QuinticCoeffs {
     }
 
     /// Evaluate velocity at time t
+    #[inline(always)]
     pub fn velocity(&self, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
@@ -76,6 +80,7 @@ impl QuinticCoeffs {
     }
 
     /// Evaluate acceleration at time t
+    #[inline(always)]
     pub fn acceleration(&self, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
@@ -206,7 +211,8 @@ impl Predictor {
     /// Fraction of trajectory completed [0, 1]
     pub fn progress(&self) -> f32 {
         if self.duration < 1e-6 { return 1.0; }
-        let p = self.elapsed / self.duration;
+        let inv_dur = 1.0 / self.duration;
+        let p = self.elapsed * inv_dur;
         if p > 1.0 { 1.0 } else { p }
     }
 }

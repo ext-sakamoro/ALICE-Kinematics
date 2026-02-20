@@ -152,8 +152,10 @@ impl Intent {
     }
 
     /// Duration in seconds
+    #[inline(always)]
     pub fn duration_secs(&self) -> f32 {
-        self.duration_ms as f32 / 1000.0
+        const INV_1000: f32 = 1.0 / 1000.0;
+        self.duration_ms as f32 * INV_1000
     }
 }
 
@@ -166,8 +168,10 @@ fn f32_to_q8(v: f32) -> i16 {
 }
 
 /// Convert Q8.8 fixed-point (i16) to f32
+#[inline(always)]
 fn q8_to_f32(v: i16) -> f32 {
-    v as f32 / Q8_SCALE
+    const INV_Q8_SCALE: f32 = 1.0 / 256.0;
+    v as f32 * INV_Q8_SCALE
 }
 
 /// Extended intent with initial velocity (16 bytes)
