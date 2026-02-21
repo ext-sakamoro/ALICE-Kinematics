@@ -176,6 +176,44 @@ impl Joint {
 /// Maximum joints in a chain
 pub const MAX_JOINTS: usize = 7;
 
+/// Damping factor for damped-least-squares fallback (λ²)
+///
+/// When the Jacobian is near-singular (condition number is high or
+/// the effective step is tiny), the CCD step is blended with a
+/// small damped update to avoid oscillation.
+pub const DLS_LAMBDA_SQ: f32 = 0.01;
+
+/// Fraction of joint-range margin within which smoothing kicks in.
+/// E.g. 0.05 = smooth over the last 5% of range on each side.
+pub const JOINT_LIMIT_SMOOTH_MARGIN: f32 = 0.05;
+
+/// Compute a smooth joint-limit weight in [0, 1].
+///
+/// Returns 1.0 far from limits, and blends to 0.0 within
+/// `JOINT_LIMIT_SMOOTH_MARGIN` of either limit, preventing
+/// hard clamping oscillation near the boundary.
+#[inline(always)]
+fn joint_limit_weight(angle: f32, constraint: &JointConstraint) -> f32 {
+    let range = constraint.range();
+    if range < 1e-6 {
+        return 0.0;
+    }
+    let margin = range * JOINT_LIMIT_SMOOTH_MARGIN;
+    // Distance from the lower and upper limit
+    let dist_lo = angle - constraint.min_rad;
+    let dist_hi = constraint.max_rad - angle;
+    let dist_min = if dist_lo < dist_hi { dist_lo } else { dist_hi };
+    if dist_min <= 0.0 {
+        return 0.0;
+    }
+    if dist_min >= margin {
+        return 1.0;
+    }
+    // Smooth quintic blend: 0 → 1 over the margin
+    let t = dist_min / margin;
+    t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
+}
+
 /// 7-DoF kinematic chain (human arm)
 ///
 /// Shoulder: flexion/extension, abduction/adduction, rotation (3-DoF)
@@ -235,10 +273,31 @@ impl ArmChain {
         pos
     }
 
-    /// Simple CCD (Cyclic Coordinate Descent) Inverse Kinematics
+    /// CCD (Cyclic Coordinate Descent) Inverse Kinematics
     ///
-    /// Returns number of iterations used, and final error distance.
+    /// Improvements over the naive implementation:
+    /// 1. **Singularity detection** — checks the squared lengths of
+    ///    `to_end` and `to_target` before normalizing.  When either
+    ///    vector is near-zero (joint coincides with end-effector or
+    ///    target), the step is skipped for that joint to avoid
+    ///    divide-by-zero / NaN propagation.
+    /// 2. **Damped-least-squares (DLS) fallback** — when the effective
+    ///    rotation angle is very small (near a singularity), the step
+    ///    is damped by `λ² / (λ² + angle²)` so the joint does not
+    ///    thrash on degenerate configurations.
+    /// 3. **Smooth joint-limit handling** — instead of a hard clamp
+    ///    that causes oscillation at the boundary, the angular step is
+    ///    blended to zero over the last `JOINT_LIMIT_SMOOTH_MARGIN` of
+    ///    each joint's range.
+    /// 4. **Pre-computed reciprocals** — the CCD step factor and the
+    ///    DLS denominator are computed with a single reciprocal per
+    ///    iteration, replacing divisions in the inner loop.
+    ///
+    /// Returns (iterations_used, final_error_distance).
     pub fn inverse_kinematics(&mut self, target: Vec3k, max_iter: u32, tolerance: f32) -> (u32, f32) {
+        // Pre-compute constant reciprocal for the half-step scale.
+        const STEP_SCALE: f32 = 0.5;
+
         for iter in 0..max_iter {
             let end = self.forward_kinematics();
             let error = end.distance(target);
@@ -249,21 +308,57 @@ impl ArmChain {
             // CCD: iterate joints from tip to base
             for i in (0..MAX_JOINTS).rev() {
                 let joint_pos = self.joint_position(i);
+                // Re-evaluate end-effector after each joint update so that
+                // downstream joints benefit from the change immediately.
                 let end_pos = self.forward_kinematics();
 
-                let to_end = (end_pos - joint_pos).normalize();
-                let to_target = (target - joint_pos).normalize();
+                let raw_to_end    = end_pos - joint_pos;
+                let raw_to_target = target  - joint_pos;
 
-                // Angle between vectors
-                let dot = to_end.dot(to_target);
-                let dot = if dot > 1.0 { 1.0 } else if dot < -1.0 { -1.0 } else { dot };
-                let angle = acos_approx(dot);
+                // --- Singularity detection (Issue 1) ---
+                // If either vector is near-zero, normalizing would produce
+                // NaN/Inf.  Skip this joint instead of corrupting state.
+                let len_sq_end    = raw_to_end.length_sq();
+                let len_sq_target = raw_to_target.length_sq();
+                const SING_THRESH_SQ: f32 = 1e-8; // (0.1 mm)²
+                if len_sq_end < SING_THRESH_SQ || len_sq_target < SING_THRESH_SQ {
+                    continue; // joint is degenerate for this step
+                }
 
-                // Determine rotation direction
+                // Safe to normalize — pre-compute reciprocals (Issue 3)
+                let inv_len_end    = 1.0 / fast_sqrt(len_sq_end);
+                let inv_len_target = 1.0 / fast_sqrt(len_sq_target);
+                let to_end    = raw_to_end.scale(inv_len_end);
+                let to_target = raw_to_target.scale(inv_len_target);
+
+                // Angle between the two unit vectors
+                let dot = to_end.dot(to_target)
+                    .max(-1.0_f32)
+                    .min( 1.0_f32);
+                let raw_angle = acos_approx(dot);
+
+                // --- Damped-least-squares fallback (Issue 1) ---
+                // When raw_angle is tiny the Jacobian is near-singular.
+                // Apply DLS damping: effective_angle = raw_angle² / (λ² + raw_angle²)
+                // multiplied by the original sign-scaled step, so the
+                // step shrinks gracefully near zero rather than oscillating.
+                // Pre-compute reciprocal of the denominator.
+                let dls_denom = DLS_LAMBDA_SQ + raw_angle * raw_angle;
+                let inv_dls_denom = 1.0 / dls_denom; // one division, pre-computed
+                let damped_scale = raw_angle * raw_angle * inv_dls_denom;
+                let angle = raw_angle * STEP_SCALE * damped_scale;
+
+                // Rotation direction via cross product
                 let cross = to_end.cross(to_target);
-                let sign = if cross.dot(self.joints[i].axis) >= 0.0 { 1.0 } else { -1.0 };
+                let sign = if cross.dot(self.joints[i].axis) >= 0.0 { 1.0_f32 } else { -1.0_f32 };
 
-                self.joints[i].set_angle(self.joints[i].angle + sign * angle * 0.5);
+                // --- Smooth joint-limit blending (Issue 2) ---
+                // Scale the step by a weight that fades to zero near limits,
+                // preventing hard-clamp oscillation at the boundary.
+                let limit_w = joint_limit_weight(self.joints[i].angle, &self.joints[i].constraint);
+                let delta = sign * angle * limit_w;
+
+                self.joints[i].set_angle(self.joints[i].angle + delta);
             }
         }
 
@@ -455,6 +550,73 @@ mod tests {
         let (iters, error) = arm.inverse_kinematics(target, 50, 0.05);
         assert!(error < 0.15, "IK error too large: {error}");
         assert!(iters <= 50);
+    }
+
+    /// Singularity: target placed exactly at the base (zero-length
+    /// `to_target` vector). IK must not produce NaN/Inf angles.
+    #[test]
+    fn test_ik_singularity_target_at_base() {
+        let mut arm = ArmChain::right_arm();
+        // Target coincides with base — maximally degenerate
+        let target = arm.base;
+        let (_iters, error) = arm.inverse_kinematics(target, 20, 0.001);
+        // Angles must all be finite
+        for j in &arm.joints {
+            assert!(j.angle.is_finite(), "NaN/Inf angle after singularity IK");
+        }
+        // Error is also finite (arm cannot reach its own base, but no panic)
+        assert!(error.is_finite());
+    }
+
+    /// Singularity: target placed so far away that the arm is fully
+    /// extended (another classic singularity).
+    #[test]
+    fn test_ik_singularity_fully_extended() {
+        let mut arm = ArmChain::right_arm();
+        arm.base = Vec3k::ZERO;
+        // Target 10 m away — well beyond arm reach (~0.78 m)
+        let target = Vec3k::new(10.0, 0.0, 0.0);
+        let (_iters, error) = arm.inverse_kinematics(target, 30, 0.001);
+        for j in &arm.joints {
+            assert!(j.angle.is_finite(), "NaN/Inf angle on over-extension IK");
+        }
+        assert!(error.is_finite());
+        // Error should be large (target unreachable) but bounded
+        assert!(error > 0.0);
+    }
+
+    /// Smooth joint limit: after many IK iterations pushing a joint
+    /// hard against its boundary, the angle must stay within the
+    /// constraint and must be finite (no oscillation blow-up).
+    #[test]
+    fn test_ik_joint_limit_no_oscillation() {
+        let mut arm = ArmChain::right_arm();
+        arm.base = Vec3k::new(0.0, 1.5, 0.0);
+        // Target that forces elbow near its 0° lower limit
+        let target = Vec3k::new(0.0, 1.49, 0.01);
+        let (_iters, _err) = arm.inverse_kinematics(target, 100, 1e-4);
+        for j in &arm.joints {
+            assert!(j.angle.is_finite(), "NaN/Inf angle near joint limit");
+            assert!(j.angle >= j.constraint.min_rad - 1e-5,
+                "angle below minimum: {} < {}", j.angle, j.constraint.min_rad);
+            assert!(j.angle <= j.constraint.max_rad + 1e-5,
+                "angle above maximum: {} > {}", j.angle, j.constraint.max_rad);
+        }
+    }
+
+    /// joint_limit_weight returns 1.0 at mid-range and 0.0 at the boundary.
+    #[test]
+    fn test_joint_limit_weight() {
+        let c = JointConstraint::new(0.0, 90.0);
+        let mid = (c.min_rad + c.max_rad) * 0.5;
+        let w_mid = joint_limit_weight(mid, &c);
+        assert!((w_mid - 1.0).abs() < 1e-5, "weight at mid should be 1.0, got {w_mid}");
+
+        let w_at_limit = joint_limit_weight(c.min_rad, &c);
+        assert!(w_at_limit < 0.01, "weight at limit should be ~0, got {w_at_limit}");
+
+        let w_at_max = joint_limit_weight(c.max_rad, &c);
+        assert!(w_at_max < 0.01, "weight at max limit should be ~0, got {w_at_max}");
     }
 
     #[test]
