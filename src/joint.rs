@@ -6,7 +6,7 @@
 //! License: MIT
 //! Author: Moroya Sakamoto
 
-use core::ops::{Add, Sub, Mul, Neg};
+use core::ops::{Add, Mul, Neg, Sub};
 
 /// 3D vector for kinematics (12 bytes)
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -17,7 +17,11 @@ pub struct Vec3k {
 }
 
 impl Vec3k {
-    pub const ZERO: Self = Self { x: 0.0, y: 0.0, z: 0.0 };
+    pub const ZERO: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
 
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
@@ -40,7 +44,11 @@ impl Vec3k {
             return Self::ZERO;
         }
         let inv = 1.0 / len;
-        Self { x: self.x * inv, y: self.y * inv, z: self.z * inv }
+        Self {
+            x: self.x * inv,
+            y: self.y * inv,
+            z: self.z * inv,
+        }
     }
 
     #[inline(always)]
@@ -69,41 +77,63 @@ impl Vec3k {
     }
 
     pub fn scale(self, s: f32) -> Self {
-        Self { x: self.x * s, y: self.y * s, z: self.z * s }
+        Self {
+            x: self.x * s,
+            y: self.y * s,
+            z: self.z * s,
+        }
     }
 }
 
 impl Add for Vec3k {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
-        Self { x: self.x + rhs.x, y: self.y + rhs.y, z: self.z + rhs.z }
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
     }
 }
 
 impl Sub for Vec3k {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self {
-        Self { x: self.x - rhs.x, y: self.y - rhs.y, z: self.z - rhs.z }
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
     }
 }
 
 impl Mul<f32> for Vec3k {
     type Output = Self;
     fn mul(self, rhs: f32) -> Self {
-        Self { x: self.x * rhs, y: self.y * rhs, z: self.z * rhs }
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+        }
     }
 }
 
 impl Neg for Vec3k {
     type Output = Self;
     fn neg(self) -> Self {
-        Self { x: -self.x, y: -self.y, z: -self.z }
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
     }
 }
 
 /// Fast square root (Quake-style)
 fn fast_sqrt(x: f32) -> f32 {
-    if x <= 0.0 { return 0.0; }
+    if x <= 0.0 {
+        return 0.0;
+    }
     let half = 0.5 * x;
     let i = f32::to_bits(x);
     let i = 0x5f3759df - (i >> 1);
@@ -131,13 +161,20 @@ impl JointConstraint {
     }
 
     pub const fn free() -> Self {
-        Self { min_rad: -core::f32::consts::PI, max_rad: core::f32::consts::PI }
+        Self {
+            min_rad: -core::f32::consts::PI,
+            max_rad: core::f32::consts::PI,
+        }
     }
 
     pub fn clamp(&self, angle: f32) -> f32 {
-        if angle < self.min_rad { self.min_rad }
-        else if angle > self.max_rad { self.max_rad }
-        else { angle }
+        if angle < self.min_rad {
+            self.min_rad
+        } else if angle > self.max_rad {
+            self.max_rad
+        } else {
+            angle
+        }
     }
 
     pub fn range(&self) -> f32 {
@@ -165,7 +202,13 @@ impl Joint {
         let mut n = [0u8; 8];
         let len = name.len().min(8);
         n[..len].copy_from_slice(&name[..len]);
-        Self { name: n, angle: 0.0, axis, constraint, link_length }
+        Self {
+            name: n,
+            angle: 0.0,
+            axis,
+            constraint,
+            link_length,
+        }
     }
 
     pub fn set_angle(&mut self, angle: f32) {
@@ -232,26 +275,54 @@ impl ArmChain {
     pub fn right_arm() -> Self {
         let joints = [
             // Shoulder flexion/extension
-            Joint::new(b"sh_flex", Vec3k::new(1.0, 0.0, 0.0), 0.0,
-                JointConstraint::new(-60.0, 180.0)),
+            Joint::new(
+                b"sh_flex",
+                Vec3k::new(1.0, 0.0, 0.0),
+                0.0,
+                JointConstraint::new(-60.0, 180.0),
+            ),
             // Shoulder abduction/adduction
-            Joint::new(b"sh_abd", Vec3k::new(0.0, 0.0, 1.0), 0.0,
-                JointConstraint::new(-50.0, 180.0)),
+            Joint::new(
+                b"sh_abd",
+                Vec3k::new(0.0, 0.0, 1.0),
+                0.0,
+                JointConstraint::new(-50.0, 180.0),
+            ),
             // Shoulder rotation
-            Joint::new(b"sh_rot", Vec3k::new(0.0, -1.0, 0.0), 0.30,
-                JointConstraint::new(-90.0, 90.0)),
+            Joint::new(
+                b"sh_rot",
+                Vec3k::new(0.0, -1.0, 0.0),
+                0.30,
+                JointConstraint::new(-90.0, 90.0),
+            ),
             // Elbow flexion
-            Joint::new(b"el_flex", Vec3k::new(1.0, 0.0, 0.0), 0.28,
-                JointConstraint::new(0.0, 145.0)),
+            Joint::new(
+                b"el_flex",
+                Vec3k::new(1.0, 0.0, 0.0),
+                0.28,
+                JointConstraint::new(0.0, 145.0),
+            ),
             // Wrist flexion/extension
-            Joint::new(b"wr_flex", Vec3k::new(1.0, 0.0, 0.0), 0.0,
-                JointConstraint::new(-80.0, 80.0)),
+            Joint::new(
+                b"wr_flex",
+                Vec3k::new(1.0, 0.0, 0.0),
+                0.0,
+                JointConstraint::new(-80.0, 80.0),
+            ),
             // Wrist deviation
-            Joint::new(b"wr_dev", Vec3k::new(0.0, 0.0, 1.0), 0.0,
-                JointConstraint::new(-20.0, 30.0)),
+            Joint::new(
+                b"wr_dev",
+                Vec3k::new(0.0, 0.0, 1.0),
+                0.0,
+                JointConstraint::new(-20.0, 30.0),
+            ),
             // Wrist pronation/supination
-            Joint::new(b"wr_pro", Vec3k::new(0.0, -1.0, 0.0), 0.20,
-                JointConstraint::new(-80.0, 80.0)),
+            Joint::new(
+                b"wr_pro",
+                Vec3k::new(0.0, -1.0, 0.0),
+                0.20,
+                JointConstraint::new(-80.0, 80.0),
+            ),
         ];
         Self {
             joints,
@@ -294,7 +365,12 @@ impl ArmChain {
     ///    iteration, replacing divisions in the inner loop.
     ///
     /// Returns (iterations_used, final_error_distance).
-    pub fn inverse_kinematics(&mut self, target: Vec3k, max_iter: u32, tolerance: f32) -> (u32, f32) {
+    pub fn inverse_kinematics(
+        &mut self,
+        target: Vec3k,
+        max_iter: u32,
+        tolerance: f32,
+    ) -> (u32, f32) {
         // Pre-compute constant reciprocal for the half-step scale.
         const STEP_SCALE: f32 = 0.5;
 
@@ -312,13 +388,13 @@ impl ArmChain {
                 // downstream joints benefit from the change immediately.
                 let end_pos = self.forward_kinematics();
 
-                let raw_to_end    = end_pos - joint_pos;
-                let raw_to_target = target  - joint_pos;
+                let raw_to_end = end_pos - joint_pos;
+                let raw_to_target = target - joint_pos;
 
                 // --- Singularity detection (Issue 1) ---
                 // If either vector is near-zero, normalizing would produce
                 // NaN/Inf.  Skip this joint instead of corrupting state.
-                let len_sq_end    = raw_to_end.length_sq();
+                let len_sq_end = raw_to_end.length_sq();
                 let len_sq_target = raw_to_target.length_sq();
                 const SING_THRESH_SQ: f32 = 1e-8; // (0.1 mm)²
                 if len_sq_end < SING_THRESH_SQ || len_sq_target < SING_THRESH_SQ {
@@ -326,15 +402,13 @@ impl ArmChain {
                 }
 
                 // Safe to normalize — pre-compute reciprocals (Issue 3)
-                let inv_len_end    = 1.0 / fast_sqrt(len_sq_end);
+                let inv_len_end = 1.0 / fast_sqrt(len_sq_end);
                 let inv_len_target = 1.0 / fast_sqrt(len_sq_target);
-                let to_end    = raw_to_end.scale(inv_len_end);
+                let to_end = raw_to_end.scale(inv_len_end);
                 let to_target = raw_to_target.scale(inv_len_target);
 
                 // Angle between the two unit vectors
-                let dot = to_end.dot(to_target)
-                    .max(-1.0_f32)
-                    .min( 1.0_f32);
+                let dot = to_end.dot(to_target).clamp(-1.0_f32, 1.0_f32);
                 let raw_angle = acos_approx(dot);
 
                 // --- Damped-least-squares fallback (Issue 1) ---
@@ -350,7 +424,11 @@ impl ArmChain {
 
                 // Rotation direction via cross product
                 let cross = to_end.cross(to_target);
-                let sign = if cross.dot(self.joints[i].axis) >= 0.0 { 1.0_f32 } else { -1.0_f32 };
+                let sign = if cross.dot(self.joints[i].axis) >= 0.0 {
+                    1.0_f32
+                } else {
+                    -1.0_f32
+                };
 
                 // --- Smooth joint-limit blending (Issue 2) ---
                 // Scale the step by a weight that fades to zero near limits,
@@ -419,7 +497,10 @@ fn rotate_vec(v: Vec3k, axis: Vec3k, theta: f32) -> Vec3k {
 
 /// Approximate sin and cos (Bhaskara I + identity)
 fn sin_cos_approx(theta: f32) -> (f32, f32) {
-    (sin_approx(theta), sin_approx(theta + core::f32::consts::FRAC_PI_2))
+    (
+        sin_approx(theta),
+        sin_approx(theta + core::f32::consts::FRAC_PI_2),
+    )
 }
 
 /// Fast sine approximation (Bhaskara I, max error ~0.2%)
@@ -427,10 +508,14 @@ fn sin_cos_approx(theta: f32) -> (f32, f32) {
 fn sin_approx(x: f32) -> f32 {
     let pi = core::f32::consts::PI;
     let mut x = x % (2.0 * pi);
-    if x < 0.0 { x += 2.0 * pi; }
+    if x < 0.0 {
+        x += 2.0 * pi;
+    }
 
     let sign = if x > pi { -1.0 } else { 1.0 };
-    if x > pi { x -= pi; }
+    if x > pi {
+        x -= pi;
+    }
 
     let num = 16.0 * x * (pi - x);
     let den = 5.0 * pi * pi - 4.0 * x * (pi - x);
@@ -447,7 +532,11 @@ fn acos_approx(x: f32) -> f32 {
     let result = (result - 0.2121144) * abs_x;
     let result = result + core::f32::consts::FRAC_PI_2;
     let result = result * fast_sqrt(1.0 - abs_x);
-    if x < 0.0 { core::f32::consts::PI - result } else { result }
+    if x < 0.0 {
+        core::f32::consts::PI - result
+    } else {
+        result
+    }
 }
 
 #[cfg(test)]
@@ -597,10 +686,18 @@ mod tests {
         let (_iters, _err) = arm.inverse_kinematics(target, 100, 1e-4);
         for j in &arm.joints {
             assert!(j.angle.is_finite(), "NaN/Inf angle near joint limit");
-            assert!(j.angle >= j.constraint.min_rad - 1e-5,
-                "angle below minimum: {} < {}", j.angle, j.constraint.min_rad);
-            assert!(j.angle <= j.constraint.max_rad + 1e-5,
-                "angle above maximum: {} > {}", j.angle, j.constraint.max_rad);
+            assert!(
+                j.angle >= j.constraint.min_rad - 1e-5,
+                "angle below minimum: {} < {}",
+                j.angle,
+                j.constraint.min_rad
+            );
+            assert!(
+                j.angle <= j.constraint.max_rad + 1e-5,
+                "angle above maximum: {} > {}",
+                j.angle,
+                j.constraint.max_rad
+            );
         }
     }
 
@@ -610,13 +707,22 @@ mod tests {
         let c = JointConstraint::new(0.0, 90.0);
         let mid = (c.min_rad + c.max_rad) * 0.5;
         let w_mid = joint_limit_weight(mid, &c);
-        assert!((w_mid - 1.0).abs() < 1e-5, "weight at mid should be 1.0, got {w_mid}");
+        assert!(
+            (w_mid - 1.0).abs() < 1e-5,
+            "weight at mid should be 1.0, got {w_mid}"
+        );
 
         let w_at_limit = joint_limit_weight(c.min_rad, &c);
-        assert!(w_at_limit < 0.01, "weight at limit should be ~0, got {w_at_limit}");
+        assert!(
+            w_at_limit < 0.01,
+            "weight at limit should be ~0, got {w_at_limit}"
+        );
 
         let w_at_max = joint_limit_weight(c.max_rad, &c);
-        assert!(w_at_max < 0.01, "weight at max limit should be ~0, got {w_at_max}");
+        assert!(
+            w_at_max < 0.01,
+            "weight at max limit should be ~0, got {w_at_max}"
+        );
     }
 
     #[test]

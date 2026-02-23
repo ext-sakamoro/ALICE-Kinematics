@@ -7,9 +7,9 @@
 //! License: AGPL-3.0 (encoder module)
 //! Author: Moroya Sakamoto
 
-use crate::joint::Vec3k;
 use crate::intent::{Intent, IntentFlags, IntentType};
-use crate::jerk::{JerkFitter, MotionSample, FitResult};
+use crate::jerk::{FitResult, JerkFitter, MotionSample};
+use crate::joint::Vec3k;
 
 /// Sensor sample from external device (IMU, camera, mouse)
 #[derive(Debug, Clone, Copy)]
@@ -70,14 +70,14 @@ impl IntentEncoder {
         Self {
             fitter: JerkFitter::new(),
             state: EncoderState::Idle,
-            vel_threshold: 0.05,      // 5 cm/s motion onset
-            fit_threshold: 0.02,      // 2cm RMS fit error
+            vel_threshold: 0.05, // 5 cm/s motion onset
+            fit_threshold: 0.02, // 2cm RMS fit error
             min_tracking_samples: 8,
             last_intent: None,
             last_fit: None,
             sequence: 0,
             prev_pos: Vec3k::ZERO,
-            dead_zone: 0.002,         // 2mm dead zone
+            dead_zone: 0.002, // 2mm dead zone
         }
     }
 
@@ -95,9 +95,7 @@ impl IntentEncoder {
     /// Returns Some(Intent) when a motion intent is extracted.
     pub fn push_sample(&mut self, sample: SensorSample) -> Option<Intent> {
         // Dead zone filtering
-        if sample.pos.distance(self.prev_pos) < self.dead_zone
-            && self.state == EncoderState::Idle
-        {
+        if sample.pos.distance(self.prev_pos) < self.dead_zone && self.state == EncoderState::Idle {
             return None;
         }
         self.prev_pos = sample.pos;
@@ -143,12 +141,7 @@ impl IntentEncoder {
         let dur_ms = (fit.duration * 1000.0) as u32;
         let dur_ms = if dur_ms > 255 { 255 } else { dur_ms as u8 };
 
-        let flags = IntentFlags::new(
-            IntentType::Reach,
-            false,
-            false,
-            self.sequence,
-        );
+        let flags = IntentFlags::new(IntentType::Reach, false, false, self.sequence);
         self.sequence = (self.sequence + 1) & 0x07;
 
         let intent = Intent {
@@ -204,7 +197,9 @@ impl IntentEncoder {
         // Intent: 8 bytes per motion, ~(1000/duration) motions per second
         let motions_per_sec = if avg_motion_duration_ms > 0 {
             1000 / avg_motion_duration_ms
-        } else { 1 };
+        } else {
+            1
+        };
         let intent = 8 * motions_per_sec;
         (raw, intent)
     }

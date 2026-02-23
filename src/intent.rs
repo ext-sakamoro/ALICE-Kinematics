@@ -78,8 +78,12 @@ impl IntentFlags {
 
     pub fn new(intent_type: IntentType, grip: bool, left: bool, seq: u8) -> Self {
         let mut f = intent_type as u8;
-        if grip { f |= 0x04; }
-        if left { f |= 0x08; }
+        if grip {
+            f |= 0x04;
+        }
+        if left {
+            f |= 0x08;
+        }
         f |= (seq & 0x07) << 5;
         Self(f)
     }
@@ -126,9 +130,12 @@ impl Intent {
         let ty = f32_to_q8(self.target.y);
         let tz = f32_to_q8(self.target.z);
         [
-            (tx >> 8) as u8, tx as u8,
-            (ty >> 8) as u8, ty as u8,
-            (tz >> 8) as u8, tz as u8,
+            (tx >> 8) as u8,
+            tx as u8,
+            (ty >> 8) as u8,
+            ty as u8,
+            (tz >> 8) as u8,
+            tz as u8,
             self.duration_ms,
             self.flags.0,
         ]
@@ -162,9 +169,13 @@ impl Intent {
 /// Convert f32 to Q8.8 fixed-point (i16)
 fn f32_to_q8(v: f32) -> i16 {
     let scaled = v * Q8_SCALE;
-    if scaled > 32767.0 { 32767 }
-    else if scaled < -32768.0 { -32768 }
-    else { scaled as i16 }
+    if scaled > 32767.0 {
+        32767
+    } else if scaled < -32768.0 {
+        -32768
+    } else {
+        scaled as i16
+    }
 }
 
 /// Convert Q8.8 fixed-point (i16) to f32
@@ -189,7 +200,11 @@ pub struct ExtendedIntent {
 
 impl ExtendedIntent {
     pub fn new(base: Intent, velocity: Vec3k) -> Self {
-        Self { base, velocity, reserved: 0 }
+        Self {
+            base,
+            velocity,
+            reserved: 0,
+        }
     }
 
     pub fn encode(&self) -> [u8; 16] {

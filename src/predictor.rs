@@ -12,12 +12,12 @@
 //! License: MIT
 //! Author: Moroya Sakamoto
 
-use crate::joint::Vec3k;
 use crate::intent::Intent;
+use crate::joint::Vec3k;
 
 /// Quintic polynomial coefficients for one axis
 ///
-/// x(t) = c[0] + c[1]*t + c[2]*t² + c[3]*t³ + c[4]*t⁴ + c[5]*t⁵
+/// `x(t) = c[0] + c[1]*t + c[2]*t² + c[3]*t³ + c[4]*t⁴ + c[5]*t⁵`
 /// where t is normalized to [0, 1]
 #[derive(Debug, Clone, Copy)]
 pub struct QuinticCoeffs {
@@ -33,12 +33,14 @@ impl QuinticCoeffs {
     pub fn from_boundary(x0: f32, v0: f32, a0: f32, xf: f32, duration: f32) -> Self {
         let t = duration;
         if t < 1e-6 {
-            return Self { c: [xf, 0.0, 0.0, 0.0, 0.0, 0.0] };
+            return Self {
+                c: [xf, 0.0, 0.0, 0.0, 0.0, 0.0],
+            };
         }
         let t2 = t * t;
 
         // Precompute reciprocals to replace repeated divisions
-        let inv_t  = 1.0 / t;
+        let inv_t = 1.0 / t;
         let inv_t2 = inv_t * inv_t;
         let inv_t3 = inv_t2 * inv_t;
         let inv_t4 = inv_t3 * inv_t;
@@ -55,7 +57,9 @@ impl QuinticCoeffs {
         let c4 = -15.0 * dx * inv_t4 + (7.0 * v0 + 2.0 * a0 * t) * inv_t3 - a0 * inv_t2;
         let c5 = 6.0 * dx * inv_t5 - (3.0 * v0 + a0 * t) * inv_t4 + a0 * 0.5 * inv_t3;
 
-        Self { c: [c0, c1, c2, c3, c4, c5] }
+        Self {
+            c: [c0, c1, c2, c3, c4, c5],
+        }
     }
 
     /// Evaluate position at time t
@@ -65,8 +69,12 @@ impl QuinticCoeffs {
         let t3 = t2 * t;
         let t4 = t3 * t;
         let t5 = t4 * t;
-        self.c[0] + self.c[1] * t + self.c[2] * t2
-            + self.c[3] * t3 + self.c[4] * t4 + self.c[5] * t5
+        self.c[0]
+            + self.c[1] * t
+            + self.c[2] * t2
+            + self.c[3] * t3
+            + self.c[4] * t4
+            + self.c[5] * t5
     }
 
     /// Evaluate velocity at time t
@@ -75,8 +83,11 @@ impl QuinticCoeffs {
         let t2 = t * t;
         let t3 = t2 * t;
         let t4 = t3 * t;
-        self.c[1] + 2.0 * self.c[2] * t + 3.0 * self.c[3] * t2
-            + 4.0 * self.c[4] * t3 + 5.0 * self.c[5] * t4
+        self.c[1]
+            + 2.0 * self.c[2] * t
+            + 3.0 * self.c[3] * t2
+            + 4.0 * self.c[4] * t3
+            + 5.0 * self.c[5] * t4
     }
 
     /// Evaluate acceleration at time t
@@ -84,8 +95,7 @@ impl QuinticCoeffs {
     pub fn acceleration(&self, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
-        2.0 * self.c[2] + 6.0 * self.c[3] * t
-            + 12.0 * self.c[4] * t2 + 20.0 * self.c[5] * t3
+        2.0 * self.c[2] + 6.0 * self.c[3] * t + 12.0 * self.c[4] * t2 + 20.0 * self.c[5] * t3
     }
 }
 
@@ -114,6 +124,12 @@ pub struct Predictor {
     active: bool,
 }
 
+impl Default for Predictor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Predictor {
     pub fn new() -> Self {
         Self {
@@ -133,16 +149,25 @@ impl Predictor {
     pub fn apply_intent(&mut self, intent: Intent) {
         let dur = intent.duration_secs();
         self.traj_x = QuinticCoeffs::from_boundary(
-            self.position.x, self.velocity.x, self.acceleration.x,
-            intent.target.x, dur,
+            self.position.x,
+            self.velocity.x,
+            self.acceleration.x,
+            intent.target.x,
+            dur,
         );
         self.traj_y = QuinticCoeffs::from_boundary(
-            self.position.y, self.velocity.y, self.acceleration.y,
-            intent.target.y, dur,
+            self.position.y,
+            self.velocity.y,
+            self.acceleration.y,
+            intent.target.y,
+            dur,
         );
         self.traj_z = QuinticCoeffs::from_boundary(
-            self.position.z, self.velocity.z, self.acceleration.z,
-            intent.target.z, dur,
+            self.position.z,
+            self.velocity.z,
+            self.acceleration.z,
+            intent.target.z,
+            dur,
         );
         self.duration = dur;
         self.elapsed = 0.0;
@@ -155,7 +180,11 @@ impl Predictor {
             return;
         }
         self.elapsed += dt;
-        let t = if self.elapsed > self.duration { self.duration } else { self.elapsed };
+        let t = if self.elapsed > self.duration {
+            self.duration
+        } else {
+            self.elapsed
+        };
 
         self.position = Vec3k::new(
             self.traj_x.position(t),
@@ -180,7 +209,13 @@ impl Predictor {
 
     /// Get predicted position at a specific time offset from intent start
     pub fn position_at(&self, t: f32) -> Vec3k {
-        let t = if t > self.duration { self.duration } else if t < 0.0 { 0.0 } else { t };
+        let t = if t > self.duration {
+            self.duration
+        } else if t < 0.0 {
+            0.0
+        } else {
+            t
+        };
         Vec3k::new(
             self.traj_x.position(t),
             self.traj_y.position(t),
@@ -190,7 +225,13 @@ impl Predictor {
 
     /// Get predicted velocity at a specific time
     pub fn velocity_at(&self, t: f32) -> Vec3k {
-        let t = if t > self.duration { self.duration } else if t < 0.0 { 0.0 } else { t };
+        let t = if t > self.duration {
+            self.duration
+        } else if t < 0.0 {
+            0.0
+        } else {
+            t
+        };
         Vec3k::new(
             self.traj_x.velocity(t),
             self.traj_y.velocity(t),
@@ -205,15 +246,25 @@ impl Predictor {
 
     /// Remaining time in current trajectory
     pub fn remaining(&self) -> f32 {
-        if self.active { self.duration - self.elapsed } else { 0.0 }
+        if self.active {
+            self.duration - self.elapsed
+        } else {
+            0.0
+        }
     }
 
     /// Fraction of trajectory completed [0, 1]
     pub fn progress(&self) -> f32 {
-        if self.duration < 1e-6 { return 1.0; }
+        if self.duration < 1e-6 {
+            return 1.0;
+        }
         let inv_dur = 1.0 / self.duration;
         let p = self.elapsed * inv_dur;
-        if p > 1.0 { 1.0 } else { p }
+        if p > 1.0 {
+            1.0
+        } else {
+            p
+        }
     }
 }
 
@@ -311,12 +362,16 @@ mod tests {
         // First motion: 0 → 1
         let intent1 = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 100);
         pred.apply_intent(intent1);
-        for _ in 0..100 { pred.update(0.001); }
+        for _ in 0..100 {
+            pred.update(0.001);
+        }
 
         // Second motion: 1 → 2 (continues from current state)
         let intent2 = Intent::reach(Vec3k::new(2.0, 0.0, 0.0), 100);
         pred.apply_intent(intent2);
-        for _ in 0..100 { pred.update(0.001); }
+        for _ in 0..100 {
+            pred.update(0.001);
+        }
 
         assert!((pred.position.x - 2.0).abs() < 0.05);
     }
@@ -344,7 +399,9 @@ mod tests {
         let intent = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 200);
         pred.apply_intent(intent);
         assert!((pred.remaining() - 0.2).abs() < 0.001);
-        for _ in 0..100 { pred.update(0.001); }
+        for _ in 0..100 {
+            pred.update(0.001);
+        }
         assert!((pred.remaining() - 0.1).abs() < 0.01);
     }
 }

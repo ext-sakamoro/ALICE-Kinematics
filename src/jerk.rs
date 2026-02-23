@@ -43,7 +43,10 @@ pub struct JerkFitter {
 impl JerkFitter {
     pub fn new() -> Self {
         Self {
-            samples: [MotionSample { pos: Vec3k::ZERO, time: 0.0 }; MAX_FIT_SAMPLES],
+            samples: [MotionSample {
+                pos: Vec3k::ZERO,
+                time: 0.0,
+            }; MAX_FIT_SAMPLES],
             write_idx: 0,
             count: 0,
             min_samples: 8,
@@ -87,7 +90,9 @@ impl JerkFitter {
         let s1 = self.get_sample(self.count - 2);
         let s2 = self.get_sample(self.count - 1);
         let dt = s2.time - s1.time;
-        if dt < 1e-6 { return Vec3k::ZERO; }
+        if dt < 1e-6 {
+            return Vec3k::ZERO;
+        }
         let inv_dt = 1.0 / dt;
         (s2.pos - s1.pos).scale(inv_dt)
     }
@@ -103,7 +108,9 @@ impl JerkFitter {
 
         let dt1 = s1.time - s0.time;
         let dt2 = s2.time - s1.time;
-        if dt1 < 1e-6 || dt2 < 1e-6 { return Vec3k::ZERO; }
+        if dt1 < 1e-6 || dt2 < 1e-6 {
+            return Vec3k::ZERO;
+        }
 
         let inv_dt1 = 1.0 / dt1;
         let inv_dt2 = 1.0 / dt2;
@@ -130,7 +137,9 @@ impl JerkFitter {
         let first = self.get_sample(0);
         let last = self.get_sample(self.count - 1);
         let duration = last.time - first.time;
-        if duration < 0.01 { return None; }
+        if duration < 0.01 {
+            return None;
+        }
 
         // Estimate target using velocity extrapolation
         let vel = self.estimate_velocity();
@@ -141,7 +150,9 @@ impl JerkFitter {
         // Current speed / peak speed gives rough progress estimate
         let displacement = last.pos - first.pos;
         let dist = displacement.length();
-        if dist < 1e-4 { return None; }
+        if dist < 1e-4 {
+            return None;
+        }
 
         // Estimate total duration: D = v_peak * T * 8/15
         // At current progress, estimate remaining time
@@ -149,12 +160,12 @@ impl JerkFitter {
         let target = first.pos + displacement.normalize().scale(dist * 2.0);
 
         // Fit quintic per-axis and compute residual error
-        let fit_x = QuinticCoeffs::from_boundary(
-            first.pos.x, 0.0, 0.0, target.x, estimated_total_duration);
-        let fit_y = QuinticCoeffs::from_boundary(
-            first.pos.y, 0.0, 0.0, target.y, estimated_total_duration);
-        let fit_z = QuinticCoeffs::from_boundary(
-            first.pos.z, 0.0, 0.0, target.z, estimated_total_duration);
+        let fit_x =
+            QuinticCoeffs::from_boundary(first.pos.x, 0.0, 0.0, target.x, estimated_total_duration);
+        let fit_y =
+            QuinticCoeffs::from_boundary(first.pos.y, 0.0, 0.0, target.y, estimated_total_duration);
+        let fit_z =
+            QuinticCoeffs::from_boundary(first.pos.z, 0.0, 0.0, target.z, estimated_total_duration);
 
         // Compute fit error
         let mut total_error = 0.0f32;
@@ -198,7 +209,9 @@ pub struct FitResult {
 
 /// Fast sqrt for jerk module
 fn fast_sqrt_jerk(x: f32) -> f32 {
-    if x <= 0.0 { return 0.0; }
+    if x <= 0.0 {
+        return 0.0;
+    }
     let half = 0.5 * x;
     let i = f32::to_bits(x);
     let i = 0x5f3759df - (i >> 1);
@@ -215,7 +228,9 @@ fn fast_sqrt_jerk(x: f32) -> f32 {
 /// For minimum-jerk trajectory: J = 720 * D² / T⁵
 /// where D = displacement, T = duration
 pub fn minimum_jerk_cost(displacement: f32, duration: f32) -> f32 {
-    if duration < 1e-6 { return f32::MAX; }
+    if duration < 1e-6 {
+        return f32::MAX;
+    }
     let t5 = duration * duration * duration * duration * duration;
     720.0 * displacement * displacement / t5
 }
@@ -226,7 +241,9 @@ pub fn minimum_jerk_cost(displacement: f32, duration: f32) -> f32 {
 /// where MT = movement time, D = distance, W = target width
 #[inline(always)]
 pub fn fitts_law_duration(distance: f32, target_width: f32, a: f32, b: f32) -> f32 {
-    if target_width < 1e-6 { return a + b * 10.0; }
+    if target_width < 1e-6 {
+        return a + b * 10.0;
+    }
     let inv_w = 1.0 / target_width;
     let id = log2_approx(2.0 * distance * inv_w);
     a + b * id
@@ -234,7 +251,9 @@ pub fn fitts_law_duration(distance: f32, target_width: f32, a: f32, b: f32) -> f
 
 /// Fast log2 approximation
 fn log2_approx(x: f32) -> f32 {
-    if x <= 0.0 { return -10.0; }
+    if x <= 0.0 {
+        return -10.0;
+    }
     let bits = f32::to_bits(x);
     let exp = ((bits >> 23) & 0xFF) as f32 - 127.0;
     let frac = f32::from_bits((bits & 0x007FFFFF) | 0x3F800000) - 1.0;
@@ -274,8 +293,14 @@ mod tests {
     #[test]
     fn test_motion_detected() {
         let mut fitter = JerkFitter::new();
-        fitter.push(MotionSample { pos: Vec3k::ZERO, time: 0.0 });
-        fitter.push(MotionSample { pos: Vec3k::new(0.1, 0.0, 0.0), time: 0.01 });
+        fitter.push(MotionSample {
+            pos: Vec3k::ZERO,
+            time: 0.0,
+        });
+        fitter.push(MotionSample {
+            pos: Vec3k::new(0.1, 0.0, 0.0),
+            time: 0.01,
+        });
         assert!(fitter.motion_detected(0.5)); // 10 m/s > 0.5 threshold
     }
 
@@ -337,7 +362,10 @@ mod tests {
     #[test]
     fn test_fitter_clear() {
         let mut fitter = JerkFitter::new();
-        fitter.push(MotionSample { pos: Vec3k::ZERO, time: 0.0 });
+        fitter.push(MotionSample {
+            pos: Vec3k::ZERO,
+            time: 0.0,
+        });
         fitter.clear();
         assert_eq!(fitter.sample_count(), 0);
     }

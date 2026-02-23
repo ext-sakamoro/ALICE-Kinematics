@@ -13,15 +13,15 @@ extern crate std;
 
 extern crate alloc;
 
-pub mod joint;
 pub mod intent;
+pub mod joint;
 pub mod predictor;
 
 #[cfg(feature = "encoder")]
-pub mod jerk;
-#[cfg(feature = "encoder")]
 pub mod encoder;
+#[cfg(feature = "encoder")]
+pub mod jerk;
 
-pub use joint::{ArmChain, Joint, JointConstraint, Vec3k};
 pub use intent::{Intent, IntentFlags, IntentType};
+pub use joint::{ArmChain, Joint, JointConstraint, Vec3k};
 pub use predictor::Predictor;
