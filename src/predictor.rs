@@ -30,6 +30,7 @@ impl QuinticCoeffs {
     /// Given: start position x0, start velocity v0, start acceleration a0
     ///        end position xf, end velocity vf=0, end acceleration af=0
     ///        movement duration T
+    #[must_use]
     pub fn from_boundary(x0: f32, v0: f32, a0: f32, xf: f32, duration: f32) -> Self {
         let t = duration;
         if t < 1e-6 {
@@ -64,6 +65,7 @@ impl QuinticCoeffs {
 
     /// Evaluate position at time t
     #[inline(always)]
+    #[must_use]
     pub fn position(&self, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
@@ -79,6 +81,7 @@ impl QuinticCoeffs {
 
     /// Evaluate velocity at time t
     #[inline(always)]
+    #[must_use]
     pub fn velocity(&self, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
@@ -92,6 +95,7 @@ impl QuinticCoeffs {
 
     /// Evaluate acceleration at time t
     #[inline(always)]
+    #[must_use]
     pub fn acceleration(&self, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
@@ -131,6 +135,7 @@ impl Default for Predictor {
 }
 
 impl Predictor {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             position: Vec3k::ZERO,
@@ -208,6 +213,7 @@ impl Predictor {
     }
 
     /// Get predicted position at a specific time offset from intent start
+    #[must_use]
     pub fn position_at(&self, t: f32) -> Vec3k {
         let t = if t > self.duration {
             self.duration
@@ -224,6 +230,7 @@ impl Predictor {
     }
 
     /// Get predicted velocity at a specific time
+    #[must_use]
     pub fn velocity_at(&self, t: f32) -> Vec3k {
         let t = if t > self.duration {
             self.duration
@@ -240,11 +247,13 @@ impl Predictor {
     }
 
     /// Is the predictor actively interpolating?
+    #[must_use]
     pub fn is_active(&self) -> bool {
         self.active
     }
 
     /// Remaining time in current trajectory
+    #[must_use]
     pub fn remaining(&self) -> f32 {
         if self.active {
             self.duration - self.elapsed
@@ -254,6 +263,7 @@ impl Predictor {
     }
 
     /// Fraction of trajectory completed [0, 1]
+    #[must_use]
     pub fn progress(&self) -> f32 {
         if self.duration < 1e-6 {
             return 1.0;

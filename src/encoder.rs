@@ -64,8 +64,15 @@ pub struct IntentEncoder {
     dead_zone: f32,
 }
 
+impl Default for IntentEncoder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IntentEncoder {
     /// Create encoder with default thresholds
+    #[must_use]
     pub fn new() -> Self {
         Self {
             fitter: JerkFitter::new(),
@@ -82,6 +89,7 @@ impl IntentEncoder {
     }
 
     /// Create encoder with custom thresholds
+    #[must_use]
     pub fn with_thresholds(vel_threshold: f32, fit_threshold: f32, dead_zone: f32) -> Self {
         let mut enc = Self::new();
         enc.vel_threshold = vel_threshold;
@@ -166,16 +174,19 @@ impl IntentEncoder {
     }
 
     /// Current encoder state
+    #[must_use]
     pub fn state(&self) -> EncoderState {
         self.state
     }
 
     /// Last extracted intent
+    #[must_use]
     pub fn last_intent(&self) -> Option<Intent> {
         self.last_intent
     }
 
     /// Last fit result (for diagnostics)
+    #[must_use]
     pub fn last_fit(&self) -> Option<FitResult> {
         self.last_fit
     }
@@ -190,7 +201,8 @@ impl IntentEncoder {
 
     /// Compression ratio estimate
     ///
-    /// Returns (raw_bytes_per_second, intent_bytes_per_second)
+    /// Returns (`raw_bytes_per_second`, `intent_bytes_per_second`)
+    #[must_use]
     pub fn compression_estimate(sample_rate_hz: u32, avg_motion_duration_ms: u32) -> (u32, u32) {
         // Raw: 3 × f32 × sample_rate = 12 × sample_rate bytes/s
         let raw = 12 * sample_rate_hz;

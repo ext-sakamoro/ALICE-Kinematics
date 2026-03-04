@@ -1,5 +1,18 @@
 # Contributing to ALICE-Kinematics
 
+## Prerequisites
+
+- Rust 1.70+ (stable)
+- `clippy`, `rustfmt` コンポーネント (`rustup component add clippy rustfmt`)
+
+## Code Style
+
+- `cargo fmt` 準拠（CI で `--check` 実行）
+- `cargo clippy --features encoder -- -W clippy::all -W clippy::pedantic` 警告ゼロ
+- パブリック関数には `#[must_use]` を付与
+- `no_std` 互換: `std` は使わない（`alloc` のみ）
+- コード内コメント: 日本語
+
 ## Build
 
 ```bash

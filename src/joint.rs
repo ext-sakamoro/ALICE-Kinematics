@@ -23,21 +23,25 @@ impl Vec3k {
         z: 0.0,
     };
 
+    #[must_use]
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
 
     #[inline(always)]
+    #[must_use]
     pub fn length_sq(self) -> f32 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
     #[inline(always)]
+    #[must_use]
     pub fn length(self) -> f32 {
         fast_sqrt(self.length_sq())
     }
 
     #[inline(always)]
+    #[must_use]
     pub fn normalize(self) -> Self {
         let len = self.length();
         if len < 1e-10 {
@@ -52,10 +56,12 @@ impl Vec3k {
     }
 
     #[inline(always)]
+    #[must_use]
     pub fn dot(self, other: Self) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
+    #[must_use]
     pub fn cross(self, other: Self) -> Self {
         Self {
             x: self.y * other.z - self.z * other.y,
@@ -64,10 +70,12 @@ impl Vec3k {
         }
     }
 
+    #[must_use]
     pub fn distance(self, other: Self) -> f32 {
         (self - other).length()
     }
 
+    #[must_use]
     pub fn lerp(self, other: Self, t: f32) -> Self {
         Self {
             x: self.x + (other.x - self.x) * t,
@@ -76,6 +84,7 @@ impl Vec3k {
         }
     }
 
+    #[must_use]
     pub fn scale(self, s: f32) -> Self {
         Self {
             x: self.x * s,
@@ -136,7 +145,7 @@ fn fast_sqrt(x: f32) -> f32 {
     }
     let half = 0.5 * x;
     let i = f32::to_bits(x);
-    let i = 0x5f3759df - (i >> 1);
+    let i = 0x5f37_59df - (i >> 1);
     let y = f32::from_bits(i);
     let y = y * (1.5 - half * y * y);
     let y = y * (1.5 - half * y * y);
@@ -153,6 +162,7 @@ pub struct JointConstraint {
 }
 
 impl JointConstraint {
+    #[must_use]
     pub const fn new(min_deg: f32, max_deg: f32) -> Self {
         Self {
             min_rad: min_deg * (core::f32::consts::PI / 180.0),
@@ -160,6 +170,7 @@ impl JointConstraint {
         }
     }
 
+    #[must_use]
     pub const fn free() -> Self {
         Self {
             min_rad: -core::f32::consts::PI,
@@ -167,6 +178,7 @@ impl JointConstraint {
         }
     }
 
+    #[must_use]
     pub fn clamp(&self, angle: f32) -> f32 {
         if angle < self.min_rad {
             self.min_rad
@@ -177,6 +189,7 @@ impl JointConstraint {
         }
     }
 
+    #[must_use]
     pub fn range(&self) -> f32 {
         self.max_rad - self.min_rad
     }
@@ -198,6 +211,7 @@ pub struct Joint {
 }
 
 impl Joint {
+    #[must_use]
     pub fn new(name: &[u8], axis: Vec3k, link_length: f32, constraint: JointConstraint) -> Self {
         let mut n = [0u8; 8];
         let len = name.len().min(8);
@@ -272,6 +286,7 @@ pub struct ArmChain {
 
 impl ArmChain {
     /// Create a default right arm chain with anatomical constraints
+    #[must_use]
     pub fn right_arm() -> Self {
         let joints = [
             // Shoulder flexion/extension
@@ -331,6 +346,7 @@ impl ArmChain {
     }
 
     /// Forward Kinematics — compute end-effector position from joint angles
+    #[must_use]
     pub fn forward_kinematics(&self) -> Vec3k {
         let mut pos = self.base;
         let mut dir = Vec3k::new(0.0, -1.0, 0.0); // initial pointing down
@@ -364,7 +380,7 @@ impl ArmChain {
     ///    DLS denominator are computed with a single reciprocal per
     ///    iteration, replacing divisions in the inner loop.
     ///
-    /// Returns (iterations_used, final_error_distance).
+    /// Returns (`iterations_used`, `final_error_distance`).
     pub fn inverse_kinematics(
         &mut self,
         target: Vec3k,
@@ -383,6 +399,8 @@ impl ArmChain {
 
             // CCD: iterate joints from tip to base
             for i in (0..MAX_JOINTS).rev() {
+                const SING_THRESH_SQ: f32 = 1e-8; // (0.1 mm)²
+
                 let joint_pos = self.joint_position(i);
                 // Re-evaluate end-effector after each joint update so that
                 // downstream joints benefit from the change immediately.
@@ -396,7 +414,6 @@ impl ArmChain {
                 // NaN/Inf.  Skip this joint instead of corrupting state.
                 let len_sq_end = raw_to_end.length_sq();
                 let len_sq_target = raw_to_target.length_sq();
-                const SING_THRESH_SQ: f32 = 1e-8; // (0.1 mm)²
                 if len_sq_end < SING_THRESH_SQ || len_sq_target < SING_THRESH_SQ {
                     continue; // joint is degenerate for this step
                 }
@@ -445,6 +462,7 @@ impl ArmChain {
     }
 
     /// Get world-space position of joint i
+    #[must_use]
     pub fn joint_position(&self, joint_idx: usize) -> Vec3k {
         let mut pos = self.base;
         let mut dir = Vec3k::new(0.0, -1.0, 0.0);
@@ -460,6 +478,7 @@ impl ArmChain {
     }
 
     /// Total arm length (sum of all link lengths)
+    #[must_use]
     pub fn total_length(&self) -> f32 {
         let mut len = 0.0;
         for j in &self.joints {
@@ -469,6 +488,7 @@ impl ArmChain {
     }
 
     /// Get all joint angles as array
+    #[must_use]
     pub fn angles(&self) -> [f32; MAX_JOINTS] {
         let mut a = [0.0f32; MAX_JOINTS];
         for (i, j) in self.joints.iter().enumerate() {
@@ -527,9 +547,9 @@ fn sin_approx(x: f32) -> f32 {
 /// Fast acos approximation (Abramowitz & Stegun)
 fn acos_approx(x: f32) -> f32 {
     let abs_x = if x < 0.0 { -x } else { x };
-    let result = -0.0187293 * abs_x;
-    let result = (result + 0.0742610) * abs_x;
-    let result = (result - 0.2121144) * abs_x;
+    let result = -0.018_729_3 * abs_x;
+    let result = (result + 0.074_261_0) * abs_x;
+    let result = (result - 0.212_114_4) * abs_x;
     let result = result + core::f32::consts::FRAC_PI_2;
     let result = result * fast_sqrt(1.0 - abs_x);
     if x < 0.0 {
@@ -701,7 +721,7 @@ mod tests {
         }
     }
 
-    /// joint_limit_weight returns 1.0 at mid-range and 0.0 at the boundary.
+    /// `joint_limit_weight` returns 1.0 at mid-range and 0.0 at the boundary.
     #[test]
     fn test_joint_limit_weight() {
         let c = JointConstraint::new(0.0, 90.0);

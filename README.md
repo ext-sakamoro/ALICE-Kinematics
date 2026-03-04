@@ -67,9 +67,9 @@ use alice_kinematics::encoder::{IntentEncoder, SensorSample};
 let mut encoder = IntentEncoder::new();
 encoder.push_sample(SensorSample { pos, vel, timestamp });
 
-if let Some(intent) = encoder.extract_intent() {
-    let packet = intent.encode(); // 8-16 bytes
-    network.send(&packet);
+if let Some(intent) = encoder.push_sample(sample) {
+    // intent extracted — 8 bytes ready to send
+    println!("target: {:?}, duration: {}ms", intent.target, intent.duration_ms);
 }
 ```
 

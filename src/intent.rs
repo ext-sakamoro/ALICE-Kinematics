@@ -1,12 +1,12 @@
 //! Intent — compact motion intent packet (8-16 bytes)
 //!
 //! Replaces 1000Hz coordinate streaming with a single intent:
-//! "Move hand to (x,y,z) over duration_ms milliseconds"
+//! "Move hand to (x,y,z) over `duration_ms` milliseconds"
 //!
 //! Packet format (8 bytes):
-//! - target_x: i16 (Q8.8 fixed-point)
-//! - target_y: i16 (Q8.8 fixed-point)
-//! - target_z: i16 (Q8.8 fixed-point)
+//! - `target_x`: i16 (Q8.8 fixed-point)
+//! - `target_y`: i16 (Q8.8 fixed-point)
+//! - `target_z`: i16 (Q8.8 fixed-point)
 //! - duration: u8 (milliseconds, 0-255)
 //! - flags: u8 (joint mask, grip state, intent type)
 //!
@@ -33,9 +33,9 @@ pub enum IntentType {
 }
 
 impl IntentType {
+    #[must_use]
     pub fn from_u8(v: u8) -> Self {
         match v & 0x03 {
-            0 => Self::Reach,
             1 => Self::Point,
             2 => Self::Grasp,
             3 => Self::Release,
@@ -52,30 +52,36 @@ impl IntentFlags {
     pub const EMPTY: Self = Self(0);
 
     /// Intent type (bits 0-1)
+    #[must_use]
     pub fn intent_type(self) -> IntentType {
         IntentType::from_u8(self.0 & 0x03)
     }
 
     /// Grip state: true = closed (bit 2)
+    #[must_use]
     pub fn grip_closed(self) -> bool {
         self.0 & 0x04 != 0
     }
 
     /// Left hand (bit 3): false = right, true = left
+    #[must_use]
     pub fn is_left_hand(self) -> bool {
         self.0 & 0x08 != 0
     }
 
     /// High precision mode (bit 4): use 16-byte extended packet
+    #[must_use]
     pub fn high_precision(self) -> bool {
         self.0 & 0x10 != 0
     }
 
     /// Sequence number (bits 5-7): 0-7 wrapping counter
+    #[must_use]
     pub fn sequence(self) -> u8 {
         (self.0 >> 5) & 0x07
     }
 
+    #[must_use]
     pub fn new(intent_type: IntentType, grip: bool, left: bool, seq: u8) -> Self {
         let mut f = intent_type as u8;
         if grip {
@@ -107,6 +113,7 @@ pub struct Intent {
 
 impl Intent {
     /// Create a new reaching intent
+    #[must_use]
     pub fn reach(target: Vec3k, duration_ms: u8) -> Self {
         Self {
             target,
@@ -116,6 +123,7 @@ impl Intent {
     }
 
     /// Create a grasp intent
+    #[must_use]
     pub fn grasp(target: Vec3k, duration_ms: u8) -> Self {
         Self {
             target,
@@ -125,6 +133,7 @@ impl Intent {
     }
 
     /// Encode intent to 8-byte packet
+    #[must_use]
     pub fn encode(&self) -> [u8; 8] {
         let tx = f32_to_q8(self.target.x);
         let ty = f32_to_q8(self.target.y);
@@ -142,6 +151,7 @@ impl Intent {
     }
 
     /// Decode intent from 8-byte packet
+    #[must_use]
     pub fn decode(data: &[u8; 8]) -> Self {
         let tx = ((data[0] as i16) << 8) | data[1] as i16;
         let ty = ((data[2] as i16) << 8) | data[3] as i16;
@@ -154,12 +164,14 @@ impl Intent {
     }
 
     /// Packet size in bytes
+    #[must_use]
     pub const fn packet_size() -> usize {
         8
     }
 
     /// Duration in seconds
     #[inline(always)]
+    #[must_use]
     pub fn duration_secs(&self) -> f32 {
         const INV_1000: f32 = 1.0 / 1000.0;
         self.duration_ms as f32 * INV_1000
@@ -199,6 +211,7 @@ pub struct ExtendedIntent {
 }
 
 impl ExtendedIntent {
+    #[must_use]
     pub fn new(base: Intent, velocity: Vec3k) -> Self {
         Self {
             base,
@@ -207,6 +220,7 @@ impl ExtendedIntent {
         }
     }
 
+    #[must_use]
     pub fn encode(&self) -> [u8; 16] {
         let mut buf = [0u8; 16];
         let base_enc = self.base.encode();
@@ -226,6 +240,7 @@ impl ExtendedIntent {
         buf
     }
 
+    #[must_use]
     pub fn decode(data: &[u8; 16]) -> Self {
         let mut base_data = [0u8; 8];
         base_data.copy_from_slice(&data[0..8]);

@@ -13,4 +13,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 - Feature flags: `std`, `encoder`
 - `no_std` + `alloc` support
 - Zero external dependencies
-- 41 unit tests
+- 59 unit tests (41 base + 18 encoder feature)
+- CI/CD (GitHub Actions: test, clippy pedantic, fmt, doc)
+- `#[must_use]` on all public query functions
+- `Default` impl for `IntentEncoder`, `JerkFitter`

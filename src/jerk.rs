@@ -40,7 +40,14 @@ pub struct JerkFitter {
     min_samples: usize,
 }
 
+impl Default for JerkFitter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JerkFitter {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             samples: [MotionSample {
@@ -63,6 +70,7 @@ impl JerkFitter {
     }
 
     /// Number of samples in buffer
+    #[must_use]
     pub fn sample_count(&self) -> usize {
         self.count
     }
@@ -83,6 +91,7 @@ impl JerkFitter {
     }
 
     /// Compute current velocity from recent samples (finite difference)
+    #[must_use]
     pub fn estimate_velocity(&self) -> Vec3k {
         if self.count < 2 {
             return Vec3k::ZERO;
@@ -98,6 +107,7 @@ impl JerkFitter {
     }
 
     /// Compute current acceleration from recent samples
+    #[must_use]
     pub fn estimate_acceleration(&self) -> Vec3k {
         if self.count < 3 {
             return Vec3k::ZERO;
@@ -122,13 +132,15 @@ impl JerkFitter {
     }
 
     /// Detect if motion has started (velocity exceeds threshold)
+    #[must_use]
     pub fn motion_detected(&self, vel_threshold: f32) -> bool {
         self.estimate_velocity().length() > vel_threshold
     }
 
     /// Fit minimum-jerk trajectory to recent samples
     ///
-    /// Returns (target_position, duration, fit_error)
+    /// Returns (`target_position`, `duration`, `fit_error`)
+    #[must_use]
     pub fn fit_trajectory(&self) -> Option<FitResult> {
         if self.count < self.min_samples {
             return None;
@@ -214,7 +226,7 @@ fn fast_sqrt_jerk(x: f32) -> f32 {
     }
     let half = 0.5 * x;
     let i = f32::to_bits(x);
-    let i = 0x5f3759df - (i >> 1);
+    let i = 0x5f37_59df - (i >> 1);
     let y = f32::from_bits(i);
     let y = y * (1.5 - half * y * y);
     let y = y * (1.5 - half * y * y);
@@ -227,6 +239,7 @@ fn fast_sqrt_jerk(x: f32) -> f32 {
 ///
 /// For minimum-jerk trajectory: J = 720 * D² / T⁵
 /// where D = displacement, T = duration
+#[must_use]
 pub fn minimum_jerk_cost(displacement: f32, duration: f32) -> f32 {
     if duration < 1e-6 {
         return f32::MAX;
@@ -240,6 +253,7 @@ pub fn minimum_jerk_cost(displacement: f32, duration: f32) -> f32 {
 /// MT = a + b * log2(2D/W)
 /// where MT = movement time, D = distance, W = target width
 #[inline(always)]
+#[must_use]
 pub fn fitts_law_duration(distance: f32, target_width: f32, a: f32, b: f32) -> f32 {
     if target_width < 1e-6 {
         return a + b * 10.0;
@@ -256,7 +270,7 @@ fn log2_approx(x: f32) -> f32 {
     }
     let bits = f32::to_bits(x);
     let exp = ((bits >> 23) & 0xFF) as f32 - 127.0;
-    let frac = f32::from_bits((bits & 0x007FFFFF) | 0x3F800000) - 1.0;
+    let frac = f32::from_bits((bits & 0x007F_FFFF) | 0x3F80_0000) - 1.0;
     exp + frac * (1.0 - 0.3333 * frac)
 }
 
