@@ -34,7 +34,7 @@ pub enum IntentType {
 
 impl IntentType {
     #[must_use]
-    pub fn from_u8(v: u8) -> Self {
+    pub const fn from_u8(v: u8) -> Self {
         match v & 0x03 {
             1 => Self::Point,
             2 => Self::Grasp,
@@ -53,36 +53,36 @@ impl IntentFlags {
 
     /// Intent type (bits 0-1)
     #[must_use]
-    pub fn intent_type(self) -> IntentType {
+    pub const fn intent_type(self) -> IntentType {
         IntentType::from_u8(self.0 & 0x03)
     }
 
     /// Grip state: true = closed (bit 2)
     #[must_use]
-    pub fn grip_closed(self) -> bool {
+    pub const fn grip_closed(self) -> bool {
         self.0 & 0x04 != 0
     }
 
     /// Left hand (bit 3): false = right, true = left
     #[must_use]
-    pub fn is_left_hand(self) -> bool {
+    pub const fn is_left_hand(self) -> bool {
         self.0 & 0x08 != 0
     }
 
     /// High precision mode (bit 4): use 16-byte extended packet
     #[must_use]
-    pub fn high_precision(self) -> bool {
+    pub const fn high_precision(self) -> bool {
         self.0 & 0x10 != 0
     }
 
     /// Sequence number (bits 5-7): 0-7 wrapping counter
     #[must_use]
-    pub fn sequence(self) -> u8 {
+    pub const fn sequence(self) -> u8 {
         (self.0 >> 5) & 0x07
     }
 
     #[must_use]
-    pub fn new(intent_type: IntentType, grip: bool, left: bool, seq: u8) -> Self {
+    pub const fn new(intent_type: IntentType, grip: bool, left: bool, seq: u8) -> Self {
         let mut f = intent_type as u8;
         if grip {
             f |= 0x04;
@@ -114,7 +114,7 @@ pub struct Intent {
 impl Intent {
     /// Create a new reaching intent
     #[must_use]
-    pub fn reach(target: Vec3k, duration_ms: u8) -> Self {
+    pub const fn reach(target: Vec3k, duration_ms: u8) -> Self {
         Self {
             target,
             duration_ms,
@@ -124,7 +124,7 @@ impl Intent {
 
     /// Create a grasp intent
     #[must_use]
-    pub fn grasp(target: Vec3k, duration_ms: u8) -> Self {
+    pub const fn grasp(target: Vec3k, duration_ms: u8) -> Self {
         Self {
             target,
             duration_ms,
@@ -212,7 +212,7 @@ pub struct ExtendedIntent {
 
 impl ExtendedIntent {
     #[must_use]
-    pub fn new(base: Intent, velocity: Vec3k) -> Self {
+    pub const fn new(base: Intent, velocity: Vec3k) -> Self {
         Self {
             base,
             velocity,
@@ -340,5 +340,211 @@ mod tests {
         assert_eq!(IntentType::from_u8(1), IntentType::Point);
         assert_eq!(IntentType::from_u8(2), IntentType::Grasp);
         assert_eq!(IntentType::from_u8(3), IntentType::Release);
+    }
+
+    // --- 追加テスト ---
+
+    #[test]
+    fn test_intent_type_from_u8_upper_bits_ignored() {
+        // 上位ビットは無視されて下位2ビットのみ使われる
+        assert_eq!(IntentType::from_u8(0xFF), IntentType::Release); // 0xFF & 0x03 == 3
+        assert_eq!(IntentType::from_u8(0xFC), IntentType::Reach); // 0xFC & 0x03 == 0
+        assert_eq!(IntentType::from_u8(0xFD), IntentType::Point); // 0xFD & 0x03 == 1
+    }
+
+    #[test]
+    fn test_intent_flags_empty() {
+        let f = IntentFlags::EMPTY;
+        assert_eq!(f.intent_type(), IntentType::Reach);
+        assert!(!f.grip_closed());
+        assert!(!f.is_left_hand());
+        assert!(!f.high_precision());
+        assert_eq!(f.sequence(), 0);
+    }
+
+    #[test]
+    fn test_intent_flags_sequence_range() {
+        // sequence は 3ビット (0-7)
+        for seq in 0u8..8 {
+            let f = IntentFlags::new(IntentType::Reach, false, false, seq);
+            assert_eq!(f.sequence(), seq);
+        }
+        // 8以上は下位3ビットに切り捨て
+        let f = IntentFlags::new(IntentType::Reach, false, false, 9);
+        assert_eq!(f.sequence(), 1); // 9 & 0x07 == 1
+    }
+
+    #[test]
+    fn test_intent_flags_all_bits() {
+        let f = IntentFlags::new(IntentType::Release, true, true, 7);
+        assert_eq!(f.intent_type(), IntentType::Release);
+        assert!(f.grip_closed());
+        assert!(f.is_left_hand());
+        assert_eq!(f.sequence(), 7);
+    }
+
+    #[test]
+    fn test_intent_flags_right_hand_no_grip() {
+        let f = IntentFlags::new(IntentType::Point, false, false, 3);
+        assert_eq!(f.intent_type(), IntentType::Point);
+        assert!(!f.grip_closed());
+        assert!(!f.is_left_hand());
+        assert_eq!(f.sequence(), 3);
+    }
+
+    #[test]
+    fn test_intent_zero_duration() {
+        let intent = Intent::reach(Vec3k::ZERO, 0);
+        assert_eq!(intent.duration_ms, 0);
+        assert!((intent.duration_secs()).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_intent_max_duration() {
+        let intent = Intent::reach(Vec3k::ZERO, 255);
+        assert_eq!(intent.duration_ms, 255);
+        assert!((intent.duration_secs() - 0.255).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_intent_encode_decode_negative_coords() {
+        let intent = Intent::reach(Vec3k::new(-1.0, -0.5, -0.25), 100);
+        let encoded = intent.encode();
+        let decoded = Intent::decode(&encoded);
+        assert!((decoded.target.x - (-1.0)).abs() < 0.01);
+        assert!((decoded.target.y - (-0.5)).abs() < 0.01);
+        assert!((decoded.target.z - (-0.25)).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_intent_encode_decode_zero_target() {
+        let intent = Intent::reach(Vec3k::ZERO, 50);
+        let encoded = intent.encode();
+        let decoded = Intent::decode(&encoded);
+        assert!(decoded.target.x.abs() < 0.01);
+        assert!(decoded.target.y.abs() < 0.01);
+        assert!(decoded.target.z.abs() < 0.01);
+        assert_eq!(decoded.duration_ms, 50);
+    }
+
+    #[test]
+    fn test_q8_negative_saturation() {
+        // -200.0 は Q8.8 の下限 -32768 に飽和する
+        let v = f32_to_q8(-200.0);
+        assert_eq!(v, -32768);
+    }
+
+    #[test]
+    fn test_extended_intent_velocity_zero() {
+        let base = Intent::reach(Vec3k::new(0.5, 0.0, 0.0), 100);
+        let ext = ExtendedIntent::new(base, Vec3k::ZERO);
+        let encoded = ext.encode();
+        let decoded = ExtendedIntent::decode(&encoded);
+        assert!(decoded.velocity.x.abs() < 0.01);
+        assert!(decoded.velocity.y.abs() < 0.01);
+        assert!(decoded.velocity.z.abs() < 0.01);
+    }
+
+    #[test]
+    fn test_extended_intent_reserved_bytes_zero() {
+        let base = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 100);
+        let ext = ExtendedIntent::new(base, Vec3k::new(0.5, 0.0, 0.0));
+        let encoded = ext.encode();
+        assert_eq!(encoded.len(), 16);
+        // 後半2バイトはreserved = 0
+        assert_eq!(encoded[14], 0);
+        assert_eq!(encoded[15], 0);
+    }
+
+    // --- さらに追加テスト ---
+
+    #[test]
+    fn test_intent_reach_type_is_reach() {
+        // reach() ファクトリは IntentType::Reach を返す
+        let intent = Intent::reach(Vec3k::new(0.1, 0.2, 0.3), 100);
+        assert_eq!(intent.flags.intent_type(), IntentType::Reach);
+        assert!(!intent.flags.grip_closed());
+    }
+
+    #[test]
+    fn test_intent_high_precision_flag() {
+        // bit4 が立っているとき high_precision は true
+        let f = IntentFlags(0x10);
+        assert!(f.high_precision());
+        // 立っていなければ false
+        let f2 = IntentFlags(0x00);
+        assert!(!f2.high_precision());
+    }
+
+    #[test]
+    fn test_intent_flags_raw_byte_roundtrip() {
+        // IntentFlags の内部バイト値が encode/decode を経ても保たれる
+        let flags = IntentFlags::new(IntentType::Grasp, true, false, 6);
+        let raw = flags.0;
+        let flags2 = IntentFlags(raw);
+        assert_eq!(flags2.intent_type(), IntentType::Grasp);
+        assert!(flags2.grip_closed());
+        assert_eq!(flags2.sequence(), 6);
+    }
+
+    #[test]
+    fn test_intent_encode_decode_preserves_flags() {
+        // encode → decode でフラグが失われない
+        let flags = IntentFlags::new(IntentType::Point, false, true, 3);
+        let intent = Intent {
+            target: Vec3k::new(0.5, 0.5, 0.0),
+            duration_ms: 80,
+            flags,
+        };
+        let encoded = intent.encode();
+        let decoded = Intent::decode(&encoded);
+        assert_eq!(decoded.flags.intent_type(), IntentType::Point);
+        assert!(decoded.flags.is_left_hand());
+        assert_eq!(decoded.flags.sequence(), 3);
+        assert_eq!(decoded.duration_ms, 80);
+    }
+
+    #[test]
+    fn test_q8_near_zero_precision() {
+        // Q8.8 の分解能: 1/256 ≈ 0.0039
+        let v = f32_to_q8(0.004);
+        let back = q8_to_f32(v);
+        // ±2 LSB = ±0.008 の精度で復元できる
+        assert!((back - 0.004).abs() < 0.008);
+    }
+
+    #[test]
+    fn test_intent_all_types_encode_decode() {
+        // 4種類の IntentType がすべて encode/decode を経て保存される
+        let types = [
+            IntentType::Reach,
+            IntentType::Point,
+            IntentType::Grasp,
+            IntentType::Release,
+        ];
+        for it in types {
+            let flags = IntentFlags::new(it, false, false, 0);
+            let intent = Intent {
+                target: Vec3k::ZERO,
+                duration_ms: 10,
+                flags,
+            };
+            let encoded = intent.encode();
+            let decoded = Intent::decode(&encoded);
+            assert_eq!(decoded.flags.intent_type(), it);
+        }
+    }
+
+    #[test]
+    fn test_extended_intent_negative_velocity_roundtrip() {
+        // 負の速度ベクトルが encode/decode を経て正しく復元される
+        let base = Intent::reach(Vec3k::new(0.5, 0.0, 0.0), 100);
+        let vel = Vec3k::new(-0.5, -1.0, 0.25);
+        let ext = ExtendedIntent::new(base, vel);
+        let encoded = ext.encode();
+        let decoded = ExtendedIntent::decode(&encoded);
+        assert!((decoded.velocity.x - (-0.5)).abs() < 0.01);
+        assert!((decoded.velocity.y - (-1.0)).abs() < 0.01);
+        assert!((decoded.velocity.z - 0.25).abs() < 0.01);
     }
 }

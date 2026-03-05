@@ -776,4 +776,280 @@ mod tests {
         let a = acos_approx(1.0);
         assert!(a.abs() < 0.02);
     }
+
+    // --- 追加テスト ---
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_vec3k_zero() {
+        let v = Vec3k::ZERO;
+        assert_eq!(v.x, 0.0);
+        assert_eq!(v.y, 0.0);
+        assert_eq!(v.z, 0.0);
+        assert_eq!(v.length(), 0.0);
+    }
+
+    #[test]
+    fn test_vec3k_neg() {
+        let v = Vec3k::new(1.0, -2.0, 3.0);
+        let n = -v;
+        assert!((n.x - (-1.0)).abs() < 1e-6);
+        assert!((n.y - 2.0).abs() < 1e-6);
+        assert!((n.z - (-3.0)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_vec3k_mul_scalar() {
+        let v = Vec3k::new(1.0, 2.0, 3.0);
+        let s = v * 3.0;
+        assert!((s.x - 3.0).abs() < 1e-6);
+        assert!((s.y - 6.0).abs() < 1e-6);
+        assert!((s.z - 9.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_vec3k_sub() {
+        let a = Vec3k::new(5.0, 3.0, 1.0);
+        let b = Vec3k::new(2.0, 1.0, 0.5);
+        let c = a - b;
+        assert!((c.x - 3.0).abs() < 1e-6);
+        assert!((c.y - 2.0).abs() < 1e-6);
+        assert!((c.z - 0.5).abs() < 1e-6);
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_vec3k_normalize_zero_vector() {
+        // ゼロベクトルの正規化はゼロを返す (パニックしない)
+        let v = Vec3k::ZERO;
+        let n = v.normalize();
+        assert_eq!(n.x, 0.0);
+        assert_eq!(n.y, 0.0);
+        assert_eq!(n.z, 0.0);
+    }
+
+    #[test]
+    fn test_vec3k_dot_perpendicular() {
+        let x = Vec3k::new(1.0, 0.0, 0.0);
+        let y = Vec3k::new(0.0, 1.0, 0.0);
+        assert!((x.dot(y)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_vec3k_distance_self() {
+        let v = Vec3k::new(3.0, 4.0, 5.0);
+        assert!((v.distance(v)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_vec3k_lerp_endpoints() {
+        let a = Vec3k::new(0.0, 0.0, 0.0);
+        let b = Vec3k::new(10.0, 0.0, 0.0);
+        let start = a.lerp(b, 0.0);
+        let end = a.lerp(b, 1.0);
+        assert!((start.x).abs() < 1e-6);
+        assert!((end.x - 10.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_joint_constraint_range() {
+        let c = JointConstraint::new(-90.0, 90.0);
+        let expected = 180.0_f32 * (core::f32::consts::PI / 180.0);
+        assert!((c.range() - expected).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_joint_constraint_free_range() {
+        let c = JointConstraint::free();
+        assert!((c.range() - 2.0 * core::f32::consts::PI).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_joint_set_angle_clamps() {
+        let mut j = Joint::new(
+            b"test",
+            Vec3k::new(1.0, 0.0, 0.0),
+            0.3,
+            JointConstraint::new(0.0, 90.0),
+        );
+        // 上限を超えた角度はクランプされる
+        j.set_angle(200.0);
+        assert!(j.angle <= j.constraint.max_rad + 1e-5);
+        // 下限を下回る角度もクランプされる
+        j.set_angle(-10.0);
+        assert!(j.angle >= j.constraint.min_rad - 1e-5);
+    }
+
+    #[test]
+    fn test_arm_chain_angles_roundtrip() {
+        let mut arm = ArmChain::right_arm();
+        let angles = [0.1, 0.2, 0.0, 0.5, 0.1, 0.0, 0.1];
+        arm.set_angles(&angles);
+        let got = arm.angles();
+        // 制約範囲内の角度はそのまま保持される
+        for (i, &a) in angles.iter().enumerate() {
+            assert!(
+                (got[i] - a).abs() < 0.01 || got[i] >= arm.joints[i].constraint.min_rad,
+                "joint {i}: expected ~{a}, got {}",
+                got[i]
+            );
+        }
+    }
+
+    #[test]
+    fn test_joint_position_base() {
+        let arm = ArmChain::right_arm();
+        // joint_position(0) は有限値であること
+        let p0 = arm.joint_position(0);
+        assert!(p0.x.is_finite());
+        assert!(p0.y.is_finite());
+        assert!(p0.z.is_finite());
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_joint_limit_weight_zero_range() {
+        // range がほぼゼロの制約は weight 0.0 を返す
+        let c = JointConstraint {
+            min_rad: 1.0,
+            max_rad: 1.0,
+        };
+        let w = joint_limit_weight(1.0, &c);
+        assert_eq!(w, 0.0);
+    }
+
+    #[test]
+    fn test_acos_approx_minus_one() {
+        // acos(-1) ≈ π
+        let a = acos_approx(-1.0);
+        assert!((a - core::f32::consts::PI).abs() < 0.05);
+    }
+
+    #[test]
+    fn test_sin_approx_pi() {
+        // sin(π) ≈ 0
+        let s = sin_approx(core::f32::consts::PI);
+        assert!(s.abs() < 0.01);
+    }
+
+    // --- さらに追加テスト ---
+
+    #[test]
+    fn test_vec3k_scale() {
+        let v = Vec3k::new(2.0, -3.0, 0.5);
+        let s = v.scale(2.0);
+        assert!((s.x - 4.0).abs() < 1e-6);
+        assert!((s.y - (-6.0)).abs() < 1e-6);
+        assert!((s.z - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_vec3k_lerp_midpoint() {
+        let a = Vec3k::new(0.0, 0.0, 0.0);
+        let b = Vec3k::new(4.0, 4.0, 4.0);
+        let mid = a.lerp(b, 0.5);
+        assert!((mid.x - 2.0).abs() < 1e-6);
+        assert!((mid.y - 2.0).abs() < 1e-6);
+        assert!((mid.z - 2.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_vec3k_length_sq() {
+        let v = Vec3k::new(1.0, 2.0, 2.0);
+        // 1² + 2² + 2² = 9
+        assert!((v.length_sq() - 9.0).abs() < 1e-6);
+        assert!((v.length() - 3.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_forward_kinematics_changes_with_angle() {
+        // 肩の屈曲角度を変えると end-effector の位置が変わる
+        let arm1 = ArmChain::right_arm();
+        let mut arm2 = ArmChain::right_arm();
+        arm2.joints[0].set_angle(core::f32::consts::FRAC_PI_4);
+        let e1 = arm1.forward_kinematics();
+        let e2 = arm2.forward_kinematics();
+        // 角度が違えば位置は異なる
+        assert!(e1.distance(e2) > 0.01);
+        // arm1は変更していない
+        let _ = arm1.forward_kinematics();
+    }
+
+    #[test]
+    fn test_joint_position_all_joints() {
+        let arm = ArmChain::right_arm();
+        // 全ジョイントの位置が有限値であること
+        for i in 0..MAX_JOINTS {
+            let p = arm.joint_position(i);
+            assert!(p.x.is_finite(), "joint {i} x not finite");
+            assert!(p.y.is_finite(), "joint {i} y not finite");
+            assert!(p.z.is_finite(), "joint {i} z not finite");
+        }
+    }
+
+    #[test]
+    fn test_set_angles_clamps_out_of_range() {
+        let mut arm = ArmChain::right_arm();
+        // 全ジョイントに上限を超えた角度を設定 → クランプされる
+        let big = [999.0f32; MAX_JOINTS];
+        arm.set_angles(&big);
+        for (i, j) in arm.joints.iter().enumerate() {
+            assert!(
+                j.angle <= j.constraint.max_rad + 1e-5,
+                "joint {i} angle {} exceeds max {}",
+                j.angle,
+                j.constraint.max_rad
+            );
+        }
+    }
+
+    #[test]
+    fn test_arm_chain_base_offset_fk() {
+        // base をオフセットしたとき FK の結果も同量オフセットされる
+        let arm1 = ArmChain::right_arm();
+        let mut arm2 = ArmChain::right_arm();
+        arm2.base = Vec3k::new(1.0, 2.0, 3.0);
+        let e1 = arm1.forward_kinematics();
+        let e2 = arm2.forward_kinematics();
+        // base のオフセット分だけずれているはず
+        assert!((e2.x - e1.x - 1.0).abs() < 1e-5);
+        assert!((e2.y - e1.y - 2.0).abs() < 1e-5);
+        assert!((e2.z - e1.z - 3.0).abs() < 1e-5);
+        // arm1 は変更していないことも確認
+        let e1b = arm1.forward_kinematics();
+        assert!((e1.x - e1b.x).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_ik_reduces_error_vs_zero_iter() {
+        // IK を十分に回すと error が 0 イテレーション時より小さくなる
+        let mut arm = ArmChain::right_arm();
+        arm.base = Vec3k::new(0.0, 1.5, 0.0);
+        let target = Vec3k::new(0.1, 1.2, 0.2);
+        // 0 イテレーション: 初期位置と target の距離
+        let initial_error = arm.forward_kinematics().distance(target);
+        let (_iters, final_error) = arm.inverse_kinematics(target, 50, 0.001);
+        assert!(
+            final_error <= initial_error + 0.01,
+            "IK made error worse: {initial_error} → {final_error}"
+        );
+    }
+
+    #[test]
+    fn test_rotate_vec_180deg() {
+        // z軸周りに180度回転: (1,0,0) → (-1,0,0)
+        let v = Vec3k::new(1.0, 0.0, 0.0);
+        let r = rotate_vec(v, Vec3k::new(0.0, 0.0, 1.0), core::f32::consts::PI);
+        assert!((r.x - (-1.0)).abs() < 0.05);
+        assert!((r.y).abs() < 0.05);
+    }
+
+    #[test]
+    fn test_joint_constraint_clamp_within() {
+        // 制約範囲内の角度はそのまま返る
+        let c = JointConstraint::new(-45.0, 45.0);
+        let angle = 0.3;
+        let clamped = c.clamp(angle);
+        assert!((clamped - angle).abs() < 1e-6);
+    }
 }

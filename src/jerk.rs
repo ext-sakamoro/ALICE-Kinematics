@@ -399,4 +399,139 @@ mod tests {
         // d²(t²)/dt² = 2
         assert!((acc.x - 2.0).abs() < 1.0);
     }
+
+    // --- 追加テスト ---
+
+    #[test]
+    fn test_fitter_empty_velocity() {
+        // サンプルなしのとき estimate_velocity はゼロを返す
+        let fitter = JerkFitter::new();
+        let vel = fitter.estimate_velocity();
+        assert_eq!(vel.x, 0.0);
+        assert_eq!(vel.y, 0.0);
+        assert_eq!(vel.z, 0.0);
+    }
+
+    #[test]
+    fn test_fitter_one_sample_velocity() {
+        // サンプル1件のとき estimate_velocity はゼロを返す
+        let mut fitter = JerkFitter::new();
+        fitter.push(MotionSample {
+            pos: Vec3k::new(1.0, 0.0, 0.0),
+            time: 0.0,
+        });
+        let vel = fitter.estimate_velocity();
+        assert_eq!(vel.x, 0.0);
+    }
+
+    #[test]
+    fn test_fitter_empty_acceleration() {
+        // サンプルなしのとき estimate_acceleration はゼロを返す
+        let fitter = JerkFitter::new();
+        let acc = fitter.estimate_acceleration();
+        assert_eq!(acc.x, 0.0);
+    }
+
+    #[test]
+    fn test_fitter_two_samples_acceleration() {
+        // サンプル2件のとき estimate_acceleration はゼロを返す
+        let mut fitter = JerkFitter::new();
+        fitter.push(MotionSample {
+            pos: Vec3k::ZERO,
+            time: 0.0,
+        });
+        fitter.push(MotionSample {
+            pos: Vec3k::new(1.0, 0.0, 0.0),
+            time: 0.01,
+        });
+        let acc = fitter.estimate_acceleration();
+        assert_eq!(acc.x, 0.0);
+    }
+
+    #[test]
+    fn test_fit_trajectory_too_few_samples() {
+        // min_samples (8) 未満のとき None を返す
+        let mut fitter = JerkFitter::new();
+        for i in 0..5 {
+            fitter.push(MotionSample {
+                pos: Vec3k::new(i as f32 * 0.01, 0.0, 0.0),
+                time: i as f32 * 0.01,
+            });
+        }
+        assert!(fitter.fit_trajectory().is_none());
+    }
+
+    #[test]
+    fn test_fit_trajectory_zero_displacement() {
+        // 変位がほぼゼロのとき None を返す
+        let mut fitter = JerkFitter::new();
+        for i in 0..10 {
+            fitter.push(MotionSample {
+                pos: Vec3k::ZERO,
+                time: i as f32 * 0.01,
+            });
+        }
+        assert!(fitter.fit_trajectory().is_none());
+    }
+
+    #[test]
+    fn test_motion_not_detected_below_threshold() {
+        // 閾値未満の速度ではモーション未検出
+        let mut fitter = JerkFitter::new();
+        fitter.push(MotionSample {
+            pos: Vec3k::ZERO,
+            time: 0.0,
+        });
+        fitter.push(MotionSample {
+            pos: Vec3k::new(0.0001, 0.0, 0.0),
+            time: 0.01,
+        });
+        // 速度 ≈ 0.01 m/s、閾値 1.0 m/s なので未検出
+        assert!(!fitter.motion_detected(1.0));
+    }
+
+    #[test]
+    fn test_minimum_jerk_cost_zero_displacement() {
+        // 変位ゼロのとき cost はゼロ
+        let cost = minimum_jerk_cost(0.0, 1.0);
+        assert!((cost).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_minimum_jerk_cost_zero_duration() {
+        // 時間ゼロのとき cost は f32::MAX
+        let cost = minimum_jerk_cost(1.0, 0.0);
+        assert_eq!(cost, f32::MAX);
+    }
+
+    #[test]
+    fn test_fitts_law_zero_target_width() {
+        // ターゲット幅ゼロのとき a + b * 10.0 を返す (パニックしない)
+        let mt = fitts_law_duration(0.5, 0.0, 0.2, 0.1);
+        assert!((mt - (0.2 + 0.1 * 10.0)).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_fitts_law_zero_distance() {
+        // 距離ゼロのとき duration は有限値になる
+        let mt = fitts_law_duration(0.0, 0.02, 0.0, 0.1);
+        assert!(mt.is_finite());
+    }
+
+    #[test]
+    fn test_log2_approx_zero_and_negative() {
+        // ゼロ以下のとき -10.0 を返す
+        let l = log2_approx(0.0);
+        assert!((l - (-10.0)).abs() < 0.001);
+        let l = log2_approx(-5.0);
+        assert!((l - (-10.0)).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_log2_approx_power_of_two() {
+        // 2^n のとき n に近い値を返す
+        assert!((log2_approx(2.0) - 1.0).abs() < 0.1);
+        assert!((log2_approx(4.0) - 2.0).abs() < 0.1);
+        assert!((log2_approx(16.0) - 4.0).abs() < 0.1);
+    }
 }

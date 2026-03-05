@@ -136,7 +136,7 @@ impl Default for Predictor {
 
 impl Predictor {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             position: Vec3k::ZERO,
             velocity: Vec3k::ZERO,
@@ -248,7 +248,7 @@ impl Predictor {
 
     /// Is the predictor actively interpolating?
     #[must_use]
-    pub fn is_active(&self) -> bool {
+    pub const fn is_active(&self) -> bool {
         self.active
     }
 
@@ -413,5 +413,206 @@ mod tests {
             pred.update(0.001);
         }
         assert!((pred.remaining() - 0.1).abs() < 0.01);
+    }
+
+    // --- 追加テスト ---
+
+    #[test]
+    fn test_quintic_zero_duration() {
+        // 時間ゼロのとき c[0] = xf を返す (パニックしない)
+        let q = QuinticCoeffs::from_boundary(0.0, 0.0, 0.0, 5.0, 0.0);
+        assert!((q.position(0.0) - 5.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_quintic_acceleration_at_endpoints() {
+        // rest-to-rest では端点の加速度はゼロ
+        let q = QuinticCoeffs::from_boundary(0.0, 0.0, 0.0, 1.0, 1.0);
+        assert!((q.acceleration(0.0)).abs() < 0.001);
+        assert!((q.acceleration(1.0)).abs() < 0.05);
+    }
+
+    #[test]
+    fn test_quintic_position_monotone() {
+        // rest-to-rest (正の変位) では位置は単調増加
+        let q = QuinticCoeffs::from_boundary(0.0, 0.0, 0.0, 1.0, 1.0);
+        let mut prev = q.position(0.0);
+        for i in 1..=10 {
+            let t = i as f32 * 0.1;
+            let cur = q.position(t);
+            assert!(
+                cur >= prev - 1e-4,
+                "not monotone at t={t}: prev={prev}, cur={cur}"
+            );
+            prev = cur;
+        }
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn test_predictor_new_inactive() {
+        // 初期状態では inactive でポジション ZERO
+        let pred = Predictor::new();
+        assert!(!pred.is_active());
+        assert_eq!(pred.remaining(), 0.0);
+    }
+
+    #[test]
+    fn test_predictor_progress_complete() {
+        // 完了後は progress が 1.0
+        let mut pred = Predictor::new();
+        let intent = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 50);
+        pred.apply_intent(intent);
+        for _ in 0..60 {
+            pred.update(0.001);
+        }
+        assert!((pred.progress() - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_predictor_remaining_zero_after_completion() {
+        // 完了後は remaining が 0.0
+        let mut pred = Predictor::new();
+        let intent = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 50);
+        pred.apply_intent(intent);
+        for _ in 0..60 {
+            pred.update(0.001);
+        }
+        assert!((pred.remaining()).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_predictor_velocity_at_clamps_negative() {
+        // 負の時間は 0.0 にクランプされる
+        let mut pred = Predictor::new();
+        let intent = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 200);
+        pred.apply_intent(intent);
+        let v_neg = pred.velocity_at(-1.0);
+        let v_zero = pred.velocity_at(0.0);
+        assert!((v_neg.x - v_zero.x).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_predictor_position_at_clamps_over() {
+        // 時間が duration を超えたら duration の位置に固定
+        let mut pred = Predictor::new();
+        let intent = Intent::reach(Vec3k::new(2.0, 0.0, 0.0), 100);
+        pred.apply_intent(intent);
+        let p_end = pred.position_at(0.1);
+        let p_over = pred.position_at(100.0);
+        assert!((p_end.x - p_over.x).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_quintic_nonzero_start_velocity() {
+        // 初速あり: t=0 での velocity は v0 と一致
+        let v0 = 2.0;
+        let q = QuinticCoeffs::from_boundary(0.0, v0, 0.0, 3.0, 1.0);
+        assert!((q.velocity(0.0) - v0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_quintic_nonzero_start_acceleration() {
+        // 初期加速度あり: t=0 での acceleration は a0 と一致
+        let a0 = 4.0;
+        let q = QuinticCoeffs::from_boundary(0.0, 0.0, a0, 1.0, 1.0);
+        assert!((q.acceleration(0.0) - a0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_predictor_progress_zero_duration() {
+        // duration = 0 のとき progress は 1.0 を返す
+        let mut pred = Predictor::new();
+        // duration_ms = 0 → duration_secs() = 0.0
+        let intent = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 0);
+        pred.apply_intent(intent);
+        assert!((pred.progress() - 1.0).abs() < 0.01);
+    }
+
+    // --- さらに追加テスト ---
+
+    #[test]
+    fn test_predictor_default_equals_new() {
+        // Default トレイトは Predictor::new() と同じ状態を返す
+        let p1 = Predictor::new();
+        let p2 = Predictor::default();
+        assert!(!p1.is_active());
+        assert!(!p2.is_active());
+        assert!((p1.remaining() - p2.remaining()).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_quintic_velocity_positive_at_midpoint() {
+        // rest-to-rest (正の変位) では t=0.5 における速度が正
+        let q = QuinticCoeffs::from_boundary(0.0, 0.0, 0.0, 1.0, 1.0);
+        let v_mid = q.velocity(0.5);
+        assert!(v_mid > 0.0, "midpoint velocity should be positive: {v_mid}");
+    }
+
+    #[test]
+    fn test_quintic_acceleration_nonzero_mid() {
+        // 加速フェーズ中は加速度が非ゼロ
+        let q = QuinticCoeffs::from_boundary(0.0, 0.0, 0.0, 1.0, 1.0);
+        let a_quarter = q.acceleration(0.25);
+        // 加速フェーズなので正の値になる
+        assert!(
+            a_quarter > 0.0,
+            "acceleration at t=0.25 should be positive: {a_quarter}"
+        );
+    }
+
+    #[test]
+    fn test_predictor_velocity_continuous_on_chain() {
+        // チェーンされた intent 間で速度が急激に変化しない
+        let mut pred = Predictor::new();
+
+        // 1本目: 0 → (1,0,0), 100ms
+        let intent1 = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 100);
+        pred.apply_intent(intent1);
+        for _ in 0..100 {
+            pred.update(0.001);
+        }
+        let vel_before = pred.velocity.x;
+
+        // 2本目: (1,0,0) → (2,0,0), 100ms
+        let intent2 = Intent::reach(Vec3k::new(2.0, 0.0, 0.0), 100);
+        pred.apply_intent(intent2);
+        let vel_after = pred.velocity_at(0.0).x;
+
+        // apply_intent 直後の速度は前の終端速度と連続（ゼロ付近）
+        assert!(
+            (vel_after - vel_before).abs() < 0.5,
+            "velocity discontinuity: {vel_before} → {vel_after}"
+        );
+    }
+
+    #[test]
+    fn test_predictor_position_at_negative_clamped_to_start() {
+        // 負の時間 → t=0 の位置が返る
+        let mut pred = Predictor::new();
+        let intent = Intent::reach(Vec3k::new(1.0, 0.0, 0.0), 200);
+        pred.apply_intent(intent);
+        let p_neg = pred.position_at(-5.0);
+        let p_zero = pred.position_at(0.0);
+        assert!((p_neg.x - p_zero.x).abs() < 1e-6);
+        assert!((p_neg.y - p_zero.y).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_predictor_update_reaches_target_exactly() {
+        // 十分な時間 update() を呼ぶと位置が target に収束
+        let mut pred = Predictor::new();
+        let target = Vec3k::new(3.0, -1.0, 0.5);
+        let intent = Intent::reach(target, 100);
+        pred.apply_intent(intent);
+        // 余分に 50 ステップ追加で確実に完了させる
+        for _ in 0..150 {
+            pred.update(0.001);
+        }
+        assert!(
+            pred.position.distance(target) < 0.02,
+            "distance from target: {}",
+            pred.position.distance(target)
+        );
     }
 }
