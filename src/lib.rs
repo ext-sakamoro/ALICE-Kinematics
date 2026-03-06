@@ -43,9 +43,11 @@ extern crate std;
 
 extern crate alloc;
 
+pub mod hand;
 pub mod intent;
 pub mod joint;
 pub mod predictor;
+pub mod skeleton;
 
 #[cfg(feature = "encoder")]
 pub mod encoder;

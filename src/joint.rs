@@ -506,7 +506,8 @@ impl ArmChain {
 }
 
 /// Rotate vector `v` around axis `axis` by angle `theta` (Rodrigues' formula)
-fn rotate_vec(v: Vec3k, axis: Vec3k, theta: f32) -> Vec3k {
+#[must_use]
+pub fn rotate_vec(v: Vec3k, axis: Vec3k, theta: f32) -> Vec3k {
     let (sin_t, cos_t) = sin_cos_approx(theta);
     let k = axis.normalize();
     let term1 = v.scale(cos_t);
