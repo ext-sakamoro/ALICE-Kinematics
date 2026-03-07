@@ -275,6 +275,7 @@ fn log2_approx(x: f32) -> f32 {
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
 
