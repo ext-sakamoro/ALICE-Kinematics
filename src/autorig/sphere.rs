@@ -89,7 +89,8 @@ impl TangentFrame {
         let up = if radial_len_sq < 1e-10 {
             Vec3k::new(0.0, 1.0, 0.0)
         } else {
-            radial.scale(1.0 / radial_len_sq.sqrt())
+            // Vec3k::normalize は内部 fast_sqrt (no_std 対応)
+            radial.normalize()
         };
         // forward: world Y を tangent 平面に投影 (up と colinear なら world Z を使う)
         let world_y = Vec3k::new(0.0, 1.0, 0.0);

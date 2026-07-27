@@ -107,8 +107,11 @@ pub fn distance_based_skinning(
     radii: &InfluenceRadii,
 ) -> Skinning {
     let height = skeleton.height;
-    let limb_max_sq = (radii.limb_max * height).powi(2);
-    let torso_max_sq = (radii.torso_max * height).powi(2);
+    // powi(2) は std 依存、no_std のため x * x に展開
+    let limb_max = radii.limb_max * height;
+    let torso_max = radii.torso_max * height;
+    let limb_max_sq = limb_max * limb_max;
+    let torso_max_sq = torso_max * torso_max;
 
     let n = mesh.vertices.len();
     let mut bone_indices: Vec<[u16; 4]> = Vec::with_capacity(n);
