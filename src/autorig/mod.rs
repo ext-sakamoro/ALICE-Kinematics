@@ -40,12 +40,14 @@
 pub mod hypothesis;
 pub mod skinning;
 pub mod slice;
+pub mod sphere;
 
 pub use hypothesis::{build_hypothesis, hypothesis_to_skeleton, SkeletonHypothesis};
 pub use skinning::{
     distance_based_skinning, point_to_segment_distance_sq, InfluenceRadii, Skinning,
 };
 pub use slice::{normalize_mesh, slice_normalized, MeshView, NormalizedMesh, SliceStat};
+pub use sphere::{auto_rig_on_sphere, SphereContext, TangentFrame};
 
 use crate::skeleton::Skeleton;
 
