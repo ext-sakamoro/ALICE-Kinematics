@@ -26,7 +26,7 @@ rerun-viz = ["dep:rerun", "std"]
 # rerun MSRV は 1.95 (v0.35)、本 crate は rust-toolchain 1.92 pin なので
 # 互換の古い version を採用 (v0.22 系、rustc 1.79+ 対応)
 # feature `native_viewer` = 3D viewer 起動、sdk = logging API
-rerun = { version = "0.22", optional = true, default-features = false, features = ["sdk", "native_viewer"] }
+rerun = { version = "0.35", optional = true, default-features = false, features = ["sdk", "native_viewer"] }
 
 [dev-dependencies]
 
