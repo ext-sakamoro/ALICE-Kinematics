@@ -14,19 +14,50 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # B.3 Milestone (2026-08-06): lol feature の optional path dep 対応
+      # alice-lol と alice-sdf (alice-lol の transitive dep) を sibling checkout
       - uses: actions/checkout@v4
+        with:
+          path: ALICE-Kinematics
+      - uses: actions/checkout@v4
+        with:
+          repository: ext-sakamoro/ALICE-LOL
+          path: ALICE-LOL
+      - uses: actions/checkout@v4
+        with:
+          repository: ext-sakamoro/ALICE-SDF
+          path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --lib --tests
-      - run: cargo test --lib --tests --features encoder
+      - name: cargo test (default)
+        working-directory: ALICE-Kinematics
+        run: cargo test --lib --tests
+      - name: cargo test (encoder)
+        working-directory: ALICE-Kinematics
+        run: cargo test --lib --tests --features encoder
+      - name: cargo test (lol bridge)
+        working-directory: ALICE-Kinematics
+        run: cargo test --lib --tests --features lol
 
   clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: ALICE-Kinematics
+      - uses: actions/checkout@v4
+        with:
+          repository: ext-sakamoro/ALICE-LOL
+          path: ALICE-LOL
+      - uses: actions/checkout@v4
+        with:
+          repository: ext-sakamoro/ALICE-SDF
+          path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy --lib --tests --features encoder -- -W clippy::all -W clippy::pedantic
+      - name: clippy (encoder)
+        working-directory: ALICE-Kinematics
+        run: cargo clippy --lib --tests --features encoder -- -W clippy::all -W clippy::pedantic
 
   fmt:
     runs-on: ubuntu-latest
@@ -41,8 +72,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: ALICE-Kinematics
+      - uses: actions/checkout@v4
+        with:
+          repository: ext-sakamoro/ALICE-LOL
+          path: ALICE-LOL
+      - uses: actions/checkout@v4
+        with:
+          repository: ext-sakamoro/ALICE-SDF
+          path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo doc --no-deps
+      - name: cargo doc
+        working-directory: ALICE-Kinematics
+        run: cargo doc --no-deps
         env:
           RUSTDOCFLAGS: "-Dwarnings"
 
