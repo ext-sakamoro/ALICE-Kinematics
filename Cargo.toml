@@ -22,11 +22,19 @@ encoder = []
 # stick figure mesh + skeleton + skinning weights を rerun viewer に log できる
 rerun-viz = ["dep:rerun", "std"]
 
+# `lol` — Milestone B.3 (2026-08-06): ALICE-LOL DSL bridge
+# LOL IntentNode 16 variant を Kinematics Intent (8-byte packet) の Vec に翻訳
+# Kinematics IntentType は 4 variant (Reach/Point/Grasp/Release) のため
+# 一部 verb は Unmappable error、Rest は 空 Vec (silent)、Parallel は concurrency 喪失で flatten
+lol = ["dep:alice-lol", "std"]
+
 [dependencies]
 # rerun MSRV は 1.95 (v0.35)、本 crate は rust-toolchain 1.92 pin なので
 # 互換の古い version を採用 (v0.22 系、rustc 1.79+ 対応)
 # feature `native_viewer` = 3D viewer 起動、sdk = logging API
 rerun = { version = "0.22", optional = true, default-features = false, features = ["sdk", "native_viewer"] }
+# B.3 Milestone: LOL DSL bridge (optional path dep)
+alice-lol = { path = "../ALICE-LOL/alice-lol", optional = true, default-features = false }
 
 [dev-dependencies]
 

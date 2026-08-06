@@ -56,6 +56,10 @@ pub mod encoder;
 #[cfg(feature = "encoder")]
 pub mod jerk;
 
+/// ALICE-LOL bridge (Milestone B.3、2026-08-06): `IntentNode` → `Vec<Intent>` 翻訳器
+#[cfg(feature = "lol")]
+pub mod lol_bridge;
+
 pub use intent::{Intent, IntentFlags, IntentType};
 pub use joint::{ArmChain, Joint, JointConstraint, Vec3k};
 pub use predictor::Predictor;
