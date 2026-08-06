@@ -314,8 +314,7 @@ mod tests {
 
     #[test]
     fn walk_maps_to_reach() {
-        let result =
-            intent_to_kinematics(&walk(Vec3::new(3.0, 0.0, 0.0), 1.5), &[]).unwrap();
+        let result = intent_to_kinematics(&walk(Vec3::new(3.0, 0.0, 0.0), 1.5), &[]).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].flags.intent_type(), IntentType::Reach);
         assert!((result[0].target.x - 3.0).abs() < f32::EPSILON);
@@ -323,11 +322,8 @@ mod tests {
 
     #[test]
     fn point_maps_to_point() {
-        let result = intent_to_kinematics(
-            &point(Vec3::new(2.0, 1.0, 0.0), HandSide::Left),
-            &[],
-        )
-        .unwrap();
+        let result =
+            intent_to_kinematics(&point(Vec3::new(2.0, 1.0, 0.0), HandSide::Left), &[]).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].flags.intent_type(), IntentType::Point);
         assert!(result[0].flags.is_left_hand());
@@ -335,11 +331,9 @@ mod tests {
 
     #[test]
     fn throw_maps_to_reach_plus_release() {
-        let result = intent_to_kinematics(
-            &throw(Vec3::new(5.0, 3.0, 0.0), 10.0, HandSide::Right),
-            &[],
-        )
-        .unwrap();
+        let result =
+            intent_to_kinematics(&throw(Vec3::new(5.0, 3.0, 0.0), 10.0, HandSide::Right), &[])
+                .unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].flags.intent_type(), IntentType::Reach);
         assert!(result[0].flags.grip_closed());
@@ -386,8 +380,7 @@ mod tests {
 
     #[test]
     fn rotate_unmappable() {
-        let err =
-            intent_to_kinematics(&rotate(0, Vec3::Y, 1.0), &[]).unwrap_err();
+        let err = intent_to_kinematics(&rotate(0, Vec3::Y, 1.0), &[]).unwrap_err();
         assert!(matches!(err, TranslationError::Unmappable(_)));
     }
 
