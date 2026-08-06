@@ -3,6 +3,10 @@
 //! Synthetic mesh fixtures (実機不要):
 //! 1. 立方体 → not humanoid
 //! 2. 縦長円柱 (aspect 3.0) → spine-only
+
+// autorig module と同じ pedantic allow を integration test でも適用
+// (i32 → f32 座標変換 / usize → u16 index 圧縮 が頻出)
+#![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 //! 3. Stick figure (torso + 2 arms + 2 legs + head) → 15+ bone
 //! 4. 腕欠損 stick figure → 部分骨格
 //! 5. 車形状 (aspect 0.4) → not humanoid

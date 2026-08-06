@@ -37,6 +37,21 @@
 //! License: MIT
 //! Author: Moroya Sakamoto
 
+// Pedantic warning 抑制 (2026-08-06 追加、autorig module 特有事情):
+// - doc_markdown: 日本語 doc 内の英数字識別子 (config.is_humanoid_min_aspect 等) に
+//   backtick を全部付けると可読性低下、config field ばかりのため一括 allow
+// - cast_precision_loss / cast_possible_truncation: 幾何演算で
+//   i32 (slice index) → f32 (座標) 変換が頻出 mesh vertex 数 usize → u16 も同様
+//   全て意図的な cast、精度損失は許容範囲 (最大 mesh vertex 数 << u16::MAX 相当)
+// - manual_let_else: `match Some/None → let-else` refactor は 好み、
+//   本 module では既存の match style を維持
+#![allow(
+    clippy::doc_markdown,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::manual_let_else
+)]
+
 pub mod hypothesis;
 pub mod skinning;
 pub mod slice;
