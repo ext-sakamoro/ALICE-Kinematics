@@ -46,6 +46,24 @@ Instead of streaming coordinates, ALICE-Kinematics:
 - **`jerk`** — Flash-Hogan jerk minimization, quintic polynomial fitting
 - **`encoder`** — Raw sensor → Intent extraction pipeline
 
+### ALICE-LOL DSL bridge (feature `lol`、Milestone B.3、2026-08-06)
+
+- **`lol_bridge`** — LOL `IntentNode` 16 variant を Kinematics `Intent` の Vec に翻訳
+- 直接 mapping (Grasp/Release/Point/Walk)、複合 (Throw/Catch/Push/Pull/Follow/Avoid)、Unmappable (Gaze/Rotate/Align)、Silent (Rest)、合成 (Sequence/Parallel flatten) を網羅
+- `NodeId` 解決は `positions: &[Vec3]` slice で疎結合 (LOL Program 型 import せず)
+- `intent_to_kinematics(intent, positions) -> Result<Vec<Intent>, TranslationError>`
+
+```rust
+// LOL DSL で書いた high-level intent を Kinematics 8-byte packet に落とす
+use alice_kinematics::lol_bridge::intent_to_kinematics;
+use alice_lol::intent::{grasp, HandSide};
+use glam::Vec3;
+
+let positions = vec![Vec3::new(1.0, 0.0, 0.5)]; // NodeId 0 → world pos
+let lol_intent = grasp(0, HandSide::Right, 3.0);
+let intents = intent_to_kinematics(&lol_intent, &positions).unwrap();
+```
+
 ## Quick Start
 
 ```rust
