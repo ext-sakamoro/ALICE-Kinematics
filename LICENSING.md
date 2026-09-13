@@ -10,7 +10,7 @@ at your option.
 ## Feature-gated AGPL modules
 
 Enabling the **`encoder` feature** activates modules licensed under
-[GNU Affero General Public License version 3](LICENSE-AGPL) instead of MIT / Apache-2.0.
+[GNU Affero General Public License version 3](docs/AGPL-3.0-encoder-feature.txt) instead of MIT / Apache-2.0.
 
 Affected modules:
 - `src/encoder.rs`
