@@ -34,7 +34,7 @@ lol = ["dep:alice-lol", "std"]
 # feature `native_viewer` = 3D viewer 起動、sdk = logging API
 rerun = { version = "0.22", optional = true, default-features = false, features = ["sdk", "native_viewer"] }
 # B.3 Milestone: LOL DSL bridge (optional path dep)
-alice-lol = { path = "../ALICE-LOL/alice-lol", optional = true, default-features = false }
+alice-lol = { path = "../ALICE-LOL/alice-lol", version = "0.3", optional = true, default-features = false }
 
 [dev-dependencies]
 
