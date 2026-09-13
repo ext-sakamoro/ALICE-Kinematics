@@ -229,6 +229,12 @@ pub fn intent_to_kinematics(
             }
             Ok(acc)
         }
+        IntentNode::LatentIntent { .. } => Err(TranslationError::Unmappable(
+            "LatentIntent: alice-lol-robot::executor で discrete verb に decode 済想定 (Phase G.1)、直接 kinematics に到達した場合は upstream decoder 未経由",
+        )),
+        IntentNode::Music { .. } => Err(TranslationError::Unmappable(
+            "Music: L1 Musical Intent は body kinematics scope 外 (alice-synth の PlanHead 経路へ)",
+        )),
     }
 }
 
