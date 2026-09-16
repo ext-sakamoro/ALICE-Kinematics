@@ -16,14 +16,14 @@ jobs:
     steps:
       # B.3 Milestone (2026-08-06): lol feature の optional path dep 対応
       # alice-lol と alice-sdf (alice-lol の transitive dep) を sibling checkout
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-LOL
           path: ALICE-LOL
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-SDF
           path: ALICE-SDF
@@ -41,14 +41,14 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-LOL
           path: ALICE-LOL
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-SDF
           path: ALICE-SDF
@@ -62,7 +62,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -71,14 +71,14 @@ jobs:
   doc:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-LOL
           path: ALICE-LOL
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-SDF
           path: ALICE-SDF
@@ -93,7 +93,7 @@ jobs:
     name: actionlint (workflow YAML 検証)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run actionlint
         uses: reviewdog/action-actionlint@v1
         with:
