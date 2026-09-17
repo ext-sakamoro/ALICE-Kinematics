@@ -47,16 +47,23 @@ impl QuinticCoeffs {
         let inv_t4 = inv_t3 * inv_t;
         let inv_t5 = inv_t4 * inv_t;
 
-        // Boundary conditions: vf = 0, af = 0 (rest-to-rest or moving-to-rest)
+        // Boundary conditions: x(0) = x0, v(0) = v0, a(0) = a0,
+        // x(T) = xf, v(T) = 0, a(T) = 0 (moving-to-rest; rest-to-rest when
+        // v0 = a0 = 0).  Closed form with Δ = xf − x0:
+        //   c3 = (20Δ − 12 v0 T − 3 a0 T²) / (2T³)
+        //   c4 = (−30Δ + 16 v0 T + 3 a0 T²) / (2T⁴)
+        //   c5 = (12Δ − 6 v0 T − a0 T²) / (2T⁵)
+        // History (2026-09-17, oracle `tests/analytic_oracle.rs`): the previous
+        // expression had the v0 / a0 terms with the wrong signs and weights,
+        // so any intent applied while moving (v0 ≠ 0) did not come to rest at
+        // the target (v(T) = 3.25 m/s for v0 = 2, T = 0.25).
         let c0 = x0;
         let c1 = v0;
         let c2 = a0 * 0.5;
-
-        // Solve for c3, c4, c5 from endpoint conditions
-        let dx = xf - x0 - v0 * t - c2 * t2;
-        let c3 = 10.0 * dx * inv_t3 - (4.0 * v0 + a0 * t) * inv_t2 + a0 * 0.5 * inv_t;
-        let c4 = -15.0 * dx * inv_t4 + (7.0 * v0 + 2.0 * a0 * t) * inv_t3 - a0 * inv_t2;
-        let c5 = 6.0 * dx * inv_t5 - (3.0 * v0 + a0 * t) * inv_t4 + a0 * 0.5 * inv_t3;
+        let delta = xf - x0;
+        let c3 = (20.0 * delta - 12.0 * v0 * t - 3.0 * a0 * t2) * 0.5 * inv_t3;
+        let c4 = (-30.0 * delta + 16.0 * v0 * t + 3.0 * a0 * t2) * 0.5 * inv_t4;
+        let c5 = (12.0 * delta - 6.0 * v0 * t - a0 * t2) * 0.5 * inv_t5;
 
         Self {
             c: [c0, c1, c2, c3, c4, c5],

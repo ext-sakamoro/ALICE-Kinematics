@@ -235,31 +235,39 @@ pub const MAX_JOINTS: usize = 7;
 
 /// Damping factor for damped-least-squares fallback (λ²)
 ///
-/// When the Jacobian is near-singular (condition number is high or
-/// the effective step is tiny), the CCD step is blended with a
-/// small damped update to avoid oscillation.
+/// No longer applied inside `inverse_kinematics` (the multiplicative
+/// θ²/(λ² + θ²) factor made CCD converge sub-linearly, 2026-09-17); kept
+/// as a public constant for API compatibility.
 pub const DLS_LAMBDA_SQ: f32 = 0.01;
 
 /// Fraction of joint-range margin within which smoothing kicks in.
 /// E.g. 0.05 = smooth over the last 5% of range on each side.
 pub const JOINT_LIMIT_SMOOTH_MARGIN: f32 = 0.05;
 
-/// Compute a smooth joint-limit weight in [0, 1].
+/// Compute a smooth joint-limit weight in [0, 1] for a step of sign `direction`.
 ///
 /// Returns 1.0 far from limits, and blends to 0.0 within
-/// `JOINT_LIMIT_SMOOTH_MARGIN` of either limit, preventing
-/// hard clamping oscillation near the boundary.
+/// `JOINT_LIMIT_SMOOTH_MARGIN` of the limit the step is moving **towards**,
+/// preventing hard clamping oscillation near the boundary.  A step that moves
+/// away from a limit is never attenuated — until 2026-09-17 the weight
+/// ignored the direction, so a joint resting exactly on a limit (the elbow at
+/// 0° = the straight arm every `ArmChain::right_arm()` starts from) had
+/// weight 0 and could never move: CCD left the elbow and the wrist deviation
+/// at 0 forever and stalled at 1.4 cm on a reachable target (oracle
+/// `tests/analytic_oracle.rs`).
 #[inline(always)]
-fn joint_limit_weight(angle: f32, constraint: &JointConstraint) -> f32 {
+fn joint_limit_weight(angle: f32, direction: f32, constraint: &JointConstraint) -> f32 {
     let range = constraint.range();
     if range < 1e-6 {
         return 0.0;
     }
     let margin = range * JOINT_LIMIT_SMOOTH_MARGIN;
-    // Distance from the lower and upper limit
-    let dist_lo = angle - constraint.min_rad;
-    let dist_hi = constraint.max_rad - angle;
-    let dist_min = if dist_lo < dist_hi { dist_lo } else { dist_hi };
+    // Distance from the limit the step is heading for
+    let dist_min = if direction >= 0.0 {
+        constraint.max_rad - angle
+    } else {
+        angle - constraint.min_rad
+    };
     if dist_min <= 0.0 {
         return 0.0;
     }
@@ -428,16 +436,15 @@ impl ArmChain {
                 let dot = to_end.dot(to_target).clamp(-1.0_f32, 1.0_f32);
                 let raw_angle = acos_approx(dot);
 
-                // --- Damped-least-squares fallback (Issue 1) ---
-                // When raw_angle is tiny the Jacobian is near-singular.
-                // Apply DLS damping: effective_angle = raw_angle² / (λ² + raw_angle²)
-                // multiplied by the original sign-scaled step, so the
-                // step shrinks gracefully near zero rather than oscillating.
-                // Pre-compute reciprocal of the denominator.
-                let dls_denom = DLS_LAMBDA_SQ + raw_angle * raw_angle;
-                let inv_dls_denom = 1.0 / dls_denom; // one division, pre-computed
-                let damped_scale = raw_angle * raw_angle * inv_dls_denom;
-                let angle = raw_angle * STEP_SCALE * damped_scale;
+                // Half-step CCD.  The former multiplicative "DLS" factor
+                // θ²/(λ² + θ²) shrank every step cubically once the tip was
+                // within ~λ = 0.1 rad of the target direction, so the error
+                // only halved per 4× iterations (1.7 cm left after 256 on a
+                // reachable target; oracle `tests/analytic_oracle.rs`,
+                // 2026-09-17).  Oscillation near singular configurations is
+                // already prevented by the singularity skip above and the
+                // half step; `DLS_LAMBDA_SQ` is kept for API compatibility.
+                let angle = raw_angle * STEP_SCALE;
 
                 // Rotation direction via cross product
                 let cross = to_end.cross(to_target);
@@ -450,7 +457,8 @@ impl ArmChain {
                 // --- Smooth joint-limit blending (Issue 2) ---
                 // Scale the step by a weight that fades to zero near limits,
                 // preventing hard-clamp oscillation at the boundary.
-                let limit_w = joint_limit_weight(self.joints[i].angle, &self.joints[i].constraint);
+                let limit_w =
+                    joint_limit_weight(self.joints[i].angle, sign, &self.joints[i].constraint);
                 let delta = sign * angle * limit_w;
 
                 self.joints[i].set_angle(self.joints[i].angle + delta);
@@ -722,28 +730,26 @@ mod tests {
         }
     }
 
-    /// `joint_limit_weight` returns 1.0 at mid-range and 0.0 at the boundary.
+    /// `joint_limit_weight` returns 1.0 at mid-range, 0.0 when stepping into
+    /// the boundary, and 1.0 when stepping away from it (2026-09-17).
     #[test]
     fn test_joint_limit_weight() {
         let c = JointConstraint::new(0.0, 90.0);
         let mid = (c.min_rad + c.max_rad) * 0.5;
-        let w_mid = joint_limit_weight(mid, &c);
-        assert!(
-            (w_mid - 1.0).abs() < 1e-5,
-            "weight at mid should be 1.0, got {w_mid}"
-        );
+        for dir in [1.0, -1.0] {
+            let w_mid = joint_limit_weight(mid, dir, &c);
+            assert!(
+                (w_mid - 1.0).abs() < 1e-5,
+                "weight at mid should be 1.0, got {w_mid}"
+            );
+        }
 
-        let w_at_limit = joint_limit_weight(c.min_rad, &c);
-        assert!(
-            w_at_limit < 0.01,
-            "weight at limit should be ~0, got {w_at_limit}"
-        );
-
-        let w_at_max = joint_limit_weight(c.max_rad, &c);
-        assert!(
-            w_at_max < 0.01,
-            "weight at max limit should be ~0, got {w_at_max}"
-        );
+        // into the lower limit: 0, away from it: 1
+        assert!(joint_limit_weight(c.min_rad, -1.0, &c) < 0.01);
+        assert!((joint_limit_weight(c.min_rad, 1.0, &c) - 1.0).abs() < 1e-5);
+        // into the upper limit: 0, away from it: 1
+        assert!(joint_limit_weight(c.max_rad, 1.0, &c) < 0.01);
+        assert!((joint_limit_weight(c.max_rad, -1.0, &c) - 1.0).abs() < 1e-5);
     }
 
     #[test]
@@ -915,7 +921,7 @@ mod tests {
             min_rad: 1.0,
             max_rad: 1.0,
         };
-        let w = joint_limit_weight(1.0, &c);
+        let w = joint_limit_weight(1.0, 1.0, &c);
         assert_eq!(w, 0.0);
     }
 

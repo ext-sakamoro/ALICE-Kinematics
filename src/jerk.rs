@@ -157,19 +157,46 @@ impl JerkFitter {
         let vel = self.estimate_velocity();
         let speed = vel.length();
 
-        // Predict remaining time using deceleration profile
-        // For minimum-jerk, peak velocity is at t=0.5T, v_peak = 15*D/(8*T)
-        // Current speed / peak speed gives rough progress estimate
         let displacement = last.pos - first.pos;
         let dist = displacement.length();
         if dist < 1e-4 {
             return None;
         }
 
-        // Estimate total duration: D = v_peak * T * 8/15
-        // At current progress, estimate remaining time
-        let estimated_total_duration = duration * 2.0; // Simple heuristic
-        let target = first.pos + displacement.normalize().scale(dist * 2.0);
+        // Minimum-jerk from rest: p(t) = p0 + D·s(t/T), s(τ) = 10τ³ − 15τ⁴ + 6τ⁵.
+        // The direction is the displacement; T follows from the ratio of two
+        // displacements, r = |p(t_m) − p0| / |p(t_l) − p0| = s(t_m/T)/s(t_l/T),
+        // which is monotone in T (bisection on x = 1/T), then D = dist / s(t_l/T).
+        // History (2026-09-17, oracle `tests/analytic_oracle.rs`): the previous
+        // heuristic assumed the window was exactly the first half (T = 2·window,
+        // target = 2·displacement) and was wrong for every other window.
+        let mid = self.get_sample(self.count / 2);
+        let t_mid = mid.time - first.time;
+        let ratio = (mid.pos - first.pos).length() / dist;
+        let estimated_total_duration = if t_mid > 1e-6 && ratio > 1e-6 && ratio < 1.0 {
+            // x = 1/T ∈ (0, 1/duration]; r(x) increases with x
+            let mut lo = 0.0f32;
+            let mut hi = 1.0 / duration;
+            for _ in 0..48 {
+                let x = 0.5 * (lo + hi);
+                let r = s_profile(t_mid * x) / s_profile(duration * x).max(1e-12);
+                if r < ratio {
+                    lo = x;
+                } else {
+                    hi = x;
+                }
+            }
+            let x = 0.5 * (lo + hi);
+            if x > 1e-9 {
+                1.0 / x
+            } else {
+                duration * 2.0
+            }
+        } else {
+            duration * 2.0
+        };
+        let progress = s_profile((duration / estimated_total_duration).min(1.0)).max(1e-6);
+        let target = first.pos + displacement.normalize().scale(dist / progress);
 
         // Fit quintic per-axis and compute residual error
         let fit_x =
@@ -239,6 +266,14 @@ fn fast_sqrt_jerk(x: f32) -> f32 {
 ///
 /// For minimum-jerk trajectory: J = 720 * D² / T⁵
 /// where D = displacement, T = duration
+/// Normalised minimum-jerk position profile s(τ) = 10τ³ − 15τ⁴ + 6τ⁵ on [0, 1]
+#[inline]
+fn s_profile(tau: f32) -> f32 {
+    let tau = tau.clamp(0.0, 1.0);
+    let t3 = tau * tau * tau;
+    t3 * (10.0 - 15.0 * tau + 6.0 * tau * tau)
+}
+
 #[must_use]
 pub fn minimum_jerk_cost(displacement: f32, duration: f32) -> f32 {
     if duration < 1e-6 {
@@ -264,14 +299,17 @@ pub fn fitts_law_duration(distance: f32, target_width: f32, a: f32, b: f32) -> f
 }
 
 /// Fast log2 approximation
+/// log₂ approximation (Mineiro's `fastlog2`, max abs error 1.4e-4 over
+/// normal floats; the earlier `exp + f(1 − f/3)` was off by up to 0.17 bit,
+/// 4 % of a typical Fitts index of difficulty — oracle 2026-09-17)
 fn log2_approx(x: f32) -> f32 {
     if x <= 0.0 {
         return -10.0;
     }
     let bits = f32::to_bits(x);
-    let exp = ((bits >> 23) & 0xFF) as f32 - 127.0;
-    let frac = f32::from_bits((bits & 0x007F_FFFF) | 0x3F80_0000) - 1.0;
-    exp + frac * (1.0 - 0.3333 * frac)
+    let y = bits as f32 * 1.192_092_9e-7; // bits / 2²³
+    let mx = f32::from_bits((bits & 0x007F_FFFF) | 0x3f00_0000); // mantissa in [0.5, 1)
+    y - 124.225_52 - 1.498_030_3 * mx - 1.725_88 / (0.352_088_7 + mx)
 }
 
 #[cfg(test)]
