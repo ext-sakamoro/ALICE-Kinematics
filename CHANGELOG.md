@@ -2,6 +2,11 @@
 
 All notable changes to ALICE-Kinematics will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- `alice-lol` 要件を `0.3` → `0.4` に追随 (LOL 0.4.0 は `LawReport` に `unresolved` field を追加した breaking だが、本 crate が使うのは `intent` module (`HandSide` / `IntentNode` / `NodeId`) と `Vec3` だけなので code 変更なし) これで `ALICE-LOL` workspace 側の `cargo metadata` が `alice-lol-robot` → `alice-kinematics` の path dep を解決できるようになる
+
 ## [0.1.0] - 2026-02-23
 
 ### Added
