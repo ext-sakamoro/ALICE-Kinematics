@@ -17,6 +17,27 @@
 //!   the error only decreases with more iterations
 //! - Predictor integration is dt-independent (it evaluates the polynomial)
 //! - skeleton scaling is proportional; hand grip is monotone
+//!
+//! Lint policy: the f32 → f64 widenings an oracle needs are written `f64::from`;
+//! the four allows below are the remaining *intentional* narrowings and are
+//! justified per lint — none of them is a blanket silencing.
+#![allow(
+    // f64 oracle values are compared against f32 tolerances (`1e-6 * scale as f32`)
+    // and f64 references are narrowed back to f32 to feed the crate under test.
+    clippy::cast_possible_truncation,
+    // loop indices and sample counts turned into step sizes; every value here is
+    // ≤ 100, far inside f32's exact integer range.
+    clippy::cast_precision_loss,
+    // these compare against sentinels the implementation returns as literals, not
+    // against computed values: `remaining()` returns 0.0 when !active,
+    // `progress()` clamps to 1.0, `from_boundary(T < 1e-6)` sets c = [xf, 0, …],
+    // `minimum_jerk_cost(_, 0.0)` returns f32::MAX, and the `dot` / `lerp` results
+    // (11.0, 1.0, −2.0) are exactly representable.
+    clippy::float_cmp,
+    // x0 / xf / v0 / a0 / t / d / k / s / c are the symbols of the Flash & Hogan
+    // quintic and of Rodrigues' rotation formula.
+    clippy::many_single_char_names
+)]
 
 use alice_kinematics::intent::Intent;
 use alice_kinematics::joint::{rotate_vec, ArmChain, JointConstraint, Vec3k};
@@ -33,34 +54,35 @@ fn s_of(tau: f64) -> f64 {
 fn quintic_rest_to_rest_is_the_flash_hogan_polynomial() {
     let (x0, xf, t_total) = (0.2f32, 1.7f32, 0.8f32);
     let q = QuinticCoeffs::from_boundary(x0, 0.0, 0.0, xf, t_total);
-    let d = (xf - x0) as f64;
+    let d = f64::from(xf - x0);
     for i in 0..=100 {
-        let tau = i as f64 / 100.0;
-        let t = (tau * t_total as f64) as f32;
-        let expected = x0 as f64 + d * s_of(tau);
+        let tau = f64::from(i) / 100.0;
+        let t = (tau * f64::from(t_total)) as f32;
+        let expected = f64::from(x0) + d * s_of(tau);
         assert!(
-            (q.position(t) as f64 - expected).abs() < 2e-6,
+            (f64::from(q.position(t)) - expected).abs() < 2e-6,
             "x(τ={tau}): {} vs {expected}",
             q.position(t)
         );
         // v = D/T·(30τ² − 60τ³ + 30τ⁴), a = D/T²·(60τ − 180τ² + 120τ³)
-        let v = d / t_total as f64 * (30.0 * tau.powi(2) - 60.0 * tau.powi(3) + 30.0 * tau.powi(4));
-        let a =
-            d / (t_total as f64).powi(2) * (60.0 * tau - 180.0 * tau.powi(2) + 120.0 * tau.powi(3));
+        let v =
+            d / f64::from(t_total) * (30.0 * tau.powi(2) - 60.0 * tau.powi(3) + 30.0 * tau.powi(4));
+        let a = d / (f64::from(t_total)).powi(2)
+            * (60.0 * tau - 180.0 * tau.powi(2) + 120.0 * tau.powi(3));
         assert!(
-            (q.velocity(t) as f64 - v).abs() < 2e-5,
+            (f64::from(q.velocity(t)) - v).abs() < 2e-5,
             "v(τ={tau}): {} vs {v}",
             q.velocity(t)
         );
         assert!(
-            (q.acceleration(t) as f64 - a).abs() < 2e-4,
+            (f64::from(q.acceleration(t)) - a).abs() < 2e-4,
             "a(τ={tau}): {} vs {a}",
             q.acceleration(t)
         );
     }
     // peak velocity 15D/(8T) at the midpoint, zero at both ends
-    let v_peak = 15.0 * d / (8.0 * t_total as f64);
-    assert!((q.velocity(t_total / 2.0) as f64 - v_peak).abs() < 1e-5);
+    let v_peak = 15.0 * d / (8.0 * f64::from(t_total));
+    assert!((f64::from(q.velocity(t_total / 2.0)) - v_peak).abs() < 1e-5);
     assert!(q.velocity(0.0).abs() < 1e-6 && q.velocity(t_total).abs() < 1e-5);
     assert!(q.acceleration(0.0).abs() < 1e-6 && q.acceleration(t_total).abs() < 1e-4);
 }
@@ -74,11 +96,13 @@ fn quintic_boundary_conditions_hold_for_any_start_state() {
         (10.0, 0.0, 0.0, 10.0, 0.5), // no displacement
     ] {
         let q = QuinticCoeffs::from_boundary(x0, v0, a0, xf, t);
-        let scale = (xf - x0)
-            .abs()
-            .max(v0.abs() * t)
-            .max(a0.abs() * t * t)
-            .max(1.0) as f64;
+        let scale = f64::from(
+            (xf - x0)
+                .abs()
+                .max(v0.abs() * t)
+                .max(a0.abs() * t * t)
+                .max(1.0),
+        );
         // oracle: the six boundary conditions that define the quintic
         assert!((q.position(0.0) - x0).abs() < 1e-6 * scale as f32, "x(0)");
         assert!((q.velocity(0.0) - v0).abs() < 1e-6 * scale as f32, "v(0)");
@@ -87,17 +111,17 @@ fn quintic_boundary_conditions_hold_for_any_start_state() {
             "a(0)"
         );
         assert!(
-            (q.position(t) as f64 - xf as f64).abs() < 1e-5 * scale,
+            (f64::from(q.position(t)) - f64::from(xf)).abs() < 1e-5 * scale,
             "x(T) = {} vs {xf}",
             q.position(t)
         );
         assert!(
-            (q.velocity(t) as f64).abs() < 1e-4 * scale / t as f64,
+            (f64::from(q.velocity(t))).abs() < 1e-4 * scale / f64::from(t),
             "v(T) = {}",
             q.velocity(t)
         );
         assert!(
-            (q.acceleration(t) as f64).abs() < 1e-3 * scale / (t * t) as f64,
+            (f64::from(q.acceleration(t))).abs() < 1e-3 * scale / f64::from(t * t),
             "a(T) = {}",
             q.acceleration(t)
         );
@@ -105,14 +129,16 @@ fn quintic_boundary_conditions_hold_for_any_start_state() {
         for k in 1..8 {
             let tt = t * k as f32 / 8.0;
             let h = 1e-3f32 * t;
-            let dv = (q.position(tt + h) as f64 - q.position(tt - h) as f64) / (2.0 * h as f64);
+            let dv = (f64::from(q.position(tt + h)) - f64::from(q.position(tt - h)))
+                / (2.0 * f64::from(h));
             assert!(
-                (q.velocity(tt) as f64 - dv).abs() < 1e-3 * scale / t as f64 + 1e-4,
+                (f64::from(q.velocity(tt)) - dv).abs() < 1e-3 * scale / f64::from(t) + 1e-4,
                 "dx/dt at {tt}"
             );
-            let da = (q.velocity(tt + h) as f64 - q.velocity(tt - h) as f64) / (2.0 * h as f64);
+            let da = (f64::from(q.velocity(tt + h)) - f64::from(q.velocity(tt - h)))
+                / (2.0 * f64::from(h));
             assert!(
-                (q.acceleration(tt) as f64 - da).abs() < 1e-2 * scale / (t * t) as f64 + 1e-3,
+                (f64::from(q.acceleration(tt)) - da).abs() < 1e-2 * scale / f64::from(t * t) + 1e-3,
                 "dv/dt at {tt}"
             );
         }
@@ -128,17 +154,17 @@ fn jerk_cost_and_fitts_law_match_their_closed_forms() {
     use alice_kinematics::jerk::{fitts_law_duration, minimum_jerk_cost};
     // ∫₀ᵀ (d³x/dt³)² dt for the rest-to-rest quintic = 720 D²/T⁵
     for (d, t) in [(1.0f32, 1.0f32), (0.5, 0.25), (2.0, 3.0)] {
-        let expected = 720.0 * (d as f64).powi(2) / (t as f64).powi(5);
+        let expected = 720.0 * (f64::from(d)).powi(2) / (f64::from(t)).powi(5);
         assert!(
-            (minimum_jerk_cost(d, t) as f64 - expected).abs() < 1e-4 * expected,
+            (f64::from(minimum_jerk_cost(d, t)) - expected).abs() < 1e-4 * expected,
             "cost({d},{t})"
         );
     }
     assert_eq!(minimum_jerk_cost(1.0, 0.0), f32::MAX);
     // Fitts: MT = a + b·log₂(2D/W)  (the crate's log2 is an approximation — bound 1 %)
     for (dist, w) in [(0.5f32, 0.05f32), (1.0, 0.1), (0.2, 0.2), (2.0, 0.01)] {
-        let expected = 0.1 + 0.15 * (2.0 * dist as f64 / w as f64).log2();
-        let got = fitts_law_duration(dist, w, 0.1, 0.15) as f64;
+        let expected = 0.1 + 0.15 * (2.0 * f64::from(dist) / f64::from(w)).log2();
+        let got = f64::from(fitts_law_duration(dist, w, 0.1, 0.15));
         assert!(
             (got - expected).abs() < 0.01 * expected.abs() + 1e-3,
             "fitts({dist},{w}): {got} vs {expected}"
@@ -182,16 +208,16 @@ fn rotate_vec_is_rodrigues_and_preserves_length() {
             let theta = i as f32 * 0.25;
             let r = rotate_vec(v, k, theta);
             let e = rodrigues64(
-                [v.x as f64, v.y as f64, v.z as f64],
-                [k.x as f64, k.y as f64, k.z as f64],
-                theta as f64,
+                [f64::from(v.x), f64::from(v.y), f64::from(v.z)],
+                [f64::from(k.x), f64::from(k.y), f64::from(k.z)],
+                f64::from(theta),
             );
-            let err = ((r.x as f64 - e[0]).powi(2)
-                + (r.y as f64 - e[1]).powi(2)
-                + (r.z as f64 - e[2]).powi(2))
+            let err = ((f64::from(r.x) - e[0]).powi(2)
+                + (f64::from(r.y) - e[1]).powi(2)
+                + (f64::from(r.z) - e[2]).powi(2))
             .sqrt();
             assert!(
-                err < ROT_BOUND * v.length() as f64,
+                err < ROT_BOUND * f64::from(v.length()),
                 "θ={theta} axis={k:?}: err {err}"
             );
             assert!(
@@ -229,25 +255,33 @@ fn right_arm_forward_kinematics_matches_an_independent_rodrigues_chain() {
     let angles = [0.4f32, -0.3, 0.9, 1.2, -0.5, 0.7, 0.2];
     arm.set_angles(&angles);
     let tip = arm.forward_kinematics();
-    let mut pos = [arm.base.x as f64, arm.base.y as f64, arm.base.z as f64];
+    let mut pos = [
+        f64::from(arm.base.x),
+        f64::from(arm.base.y),
+        f64::from(arm.base.z),
+    ];
     let mut dir = [0.0f64, -1.0, 0.0];
     for j in &arm.joints {
         dir = rodrigues64(
             dir,
-            [j.axis.x as f64, j.axis.y as f64, j.axis.z as f64],
-            j.angle as f64,
+            [
+                f64::from(j.axis.x),
+                f64::from(j.axis.y),
+                f64::from(j.axis.z),
+            ],
+            f64::from(j.angle),
         );
         for d in 0..3 {
-            pos[d] += dir[d] * j.link_length as f64;
+            pos[d] += dir[d] * f64::from(j.link_length);
         }
     }
-    let err = ((tip.x as f64 - pos[0]).powi(2)
-        + (tip.y as f64 - pos[1]).powi(2)
-        + (tip.z as f64 - pos[2]).powi(2))
+    let err = ((f64::from(tip.x) - pos[0]).powi(2)
+        + (f64::from(tip.y) - pos[1]).powi(2)
+        + (f64::from(tip.z) - pos[2]).powi(2))
     .sqrt();
     // 7 approximate rotations accumulate at most 7·ROT_BOUND of the reach
     assert!(
-        err < 7.0 * ROT_BOUND * total as f64,
+        err < 7.0 * ROT_BOUND * f64::from(total),
         "FK error {err} m (reach {total})"
     );
     // set_angles clamps to the joint limits
@@ -362,7 +396,7 @@ fn samples_of(
     (0..n)
         .map(|i| {
             let t = fraction * t_total * i as f32 / (n - 1) as f32;
-            let s = s_of((t / t_total) as f64) as f32;
+            let s = s_of(f64::from(t / t_total)) as f32;
             MotionSample {
                 pos: start.lerp(target, s),
                 time: t,
