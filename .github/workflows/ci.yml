@@ -25,6 +25,10 @@ jobs:
           path: ALICE-LOL
       - uses: actions/checkout@v5
         with:
+          repository: ext-sakamoro/ALICE-Zip
+          path: ALICE-Zip
+      - uses: actions/checkout@v5
+        with:
           repository: ext-sakamoro/ALICE-SDF
           path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
@@ -48,6 +52,10 @@ jobs:
         with:
           repository: ext-sakamoro/ALICE-LOL
           path: ALICE-LOL
+      - uses: actions/checkout@v5
+        with:
+          repository: ext-sakamoro/ALICE-Zip
+          path: ALICE-Zip
       - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-SDF
@@ -78,6 +86,10 @@ jobs:
         with:
           repository: ext-sakamoro/ALICE-LOL
           path: ALICE-LOL
+      - uses: actions/checkout@v5
+        with:
+          repository: ext-sakamoro/ALICE-Zip
+          path: ALICE-Zip
       - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-SDF
