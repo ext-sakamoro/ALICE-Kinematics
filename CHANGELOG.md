@@ -4,6 +4,8 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
 ### Added
 - `tests/analytic_oracle.rs` — 解析解 oracle 7 本 (Flash & Hogan minimum-jerk quintic / Fitts-Shannon / Rodrigues 回転と右腕 FK の独立 f64 chain 突合 / CCD IK の到達性と反復単調性 / predictor の dt 非依存 / skeleton 比例 scaling / hand grip 単調性) 期待値は閉形式解と本 file 内の f64 参照実装のみから作り、被検査関数を呼んで作らない
 
