@@ -1,6 +1,6 @@
 [package]
 name = "alice-kinematics"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
 description = "Human motion intent compression — 1000Hz raw coordinates → 8-byte kinematic intent"
@@ -8,6 +8,18 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/ext-sakamoro/ALICE-Kinematics"
 keywords = ["kinematics", "motion-capture", "compression", "no_std", "vr"]
 categories = ["no-std", "compression", "game-development"]
+# crate 本体のみを package する allowlist (配布に不要な .github / docs / scripts / tests /
+# rust-toolchain / CONTRIBUTING を除外) Cargo.toml / Cargo.lock は常に含まれる
+include = [
+    "src/**",
+    "examples/**",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "LICENSING.md",
+    "TRADEMARK_NOTICE",
+]
 
 [features]
 default = []

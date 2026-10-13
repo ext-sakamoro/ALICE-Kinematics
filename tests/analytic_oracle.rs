@@ -1,5 +1,5 @@
 //! Analytic oracles — closed-form checks for the kinematic laws in
-//! ALICE-Kinematics (CLAUDE.md § 解析解突合テスト規律, 2026-09-17).
+//! ALICE-Kinematics (解析解突合テスト規律, 2026-09-17).
 //!
 //! Expected values come from closed forms or f64 references written in this
 //! file, never from the crate function under test.  `Predictor::default()`
