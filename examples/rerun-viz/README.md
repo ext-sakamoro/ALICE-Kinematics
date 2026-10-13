@@ -4,7 +4,7 @@
 [rerun](https://github.com/rerun-io/rerun) viewer に log する dev 専用の example crate
 
 公開ライブラリ `alice-kinematics` の feature には含めない rerun + native_viewer は重い依存で
-MSRV も新しいため、本 crate を独自 workspace + `rust-toolchain.toml` (1.92.0) で単独 build する
+MSRV も新しいため、本 crate を独自 workspace + `rust-toolchain.toml` で単独 build する
 
 ## 実行
 

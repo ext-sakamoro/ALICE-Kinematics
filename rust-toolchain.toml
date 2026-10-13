@@ -1,4 +1,8 @@
 # Rust toolchain pin
+# この pin は clippy pedantic を安定させるためのもの (以前は rerun 連携も理由だったが
+# rerun は examples/rerun-viz/ の別 crate に分離済) 新しい clippy は本 crate の手書き
+# midpoint / checked division を lint するため、それらを書き換える (code 変更) まで
+# 1.92.0 に固定する 書き換え + unpin は別 version (0.2.2 以降) で対応する
 [toolchain]
 channel = "1.92.0"
 components = ["rustfmt", "clippy"]
