@@ -1,5 +1,7 @@
 /target/
-Cargo.lock
+# ライブラリ本体の lock は追跡しない 非公開の nested crate (examples/rerun-viz) は
+# 再現性のため自前の Cargo.lock を commit する (sibling の nested crate と同じ方針)
+/Cargo.lock
 
 # macOS
 .DS_Store

@@ -9,10 +9,9 @@ repository = "https://github.com/ext-sakamoro/ALICE-Kinematics"
 keywords = ["kinematics", "motion-capture", "compression", "no_std", "vr"]
 categories = ["no-std", "compression", "game-development"]
 # crate 本体のみを package する allowlist (配布に不要な .github / docs / scripts / tests /
-# rust-toolchain / CONTRIBUTING を除外) Cargo.toml / Cargo.lock は常に含まれる
+# examples / rust-toolchain / CONTRIBUTING を除外) Cargo.toml / Cargo.lock は常に含まれる
 include = [
     "src/**",
-    "examples/**",
     "README.md",
     "CHANGELOG.md",
     "LICENSE-APACHE",
@@ -29,11 +28,6 @@ std = []
 # See LICENSE-AGPL for details.
 encoder = []
 
-# rerun-io/rerun 統合による debug 可視化 (dev-dep のみ、release binary に影響なし)
-# 有効化して `cargo run --example autorig_rerun_viz --features rerun-viz` で
-# stick figure mesh + skeleton + skinning weights を rerun viewer に log できる
-rerun-viz = ["dep:rerun", "std"]
-
 # `lol` — Milestone B.3 (2026-08-06): ALICE-LOL DSL bridge
 # LOL IntentNode 16 variant を Kinematics Intent (8-byte packet) の Vec に翻訳
 # Kinematics IntentType は 4 variant (Reach/Point/Grasp/Release) のため
@@ -41,18 +35,10 @@ rerun-viz = ["dep:rerun", "std"]
 lol = ["dep:alice-lol", "std"]
 
 [dependencies]
-# rerun MSRV は 1.95 (v0.35)、本 crate は rust-toolchain 1.92 pin なので
-# 互換の古い version を採用 (v0.22 系、rustc 1.79+ 対応)
-# feature `native_viewer` = 3D viewer 起動、sdk = logging API
-rerun = { version = "0.22", optional = true, default-features = false, features = ["sdk", "native_viewer"] }
 # B.3 Milestone: LOL DSL bridge (optional path dep)
 alice-lol = { path = "../ALICE-LOL/alice-lol", version = "0.4", optional = true, default-features = false }
 
 [dev-dependencies]
-
-[[example]]
-name = "autorig_rerun_viz"
-required-features = ["rerun-viz"]
 
 [profile.release]
 opt-level = 3

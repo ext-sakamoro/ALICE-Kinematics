@@ -1,0 +1,43 @@
+name: rerun-viz example
+
+# dev 専用の非公開 example crate (examples/rerun-viz) を、pin した toolchain で build し
+# 腐らせない (ライブラリ API の drift / upstream rerun の変化を検知する)
+# 重い build (rerun + native_viewer、~300 依存) なので、関連 path の変更時と週次のみ走らせ
+# 全 push には掛けない (CI runner は共有資源)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/rerun-viz/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - '.github/workflows/example-rerun-viz.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'examples/rerun-viz/**'
+      - 'src/**'
+      - 'Cargo.toml'
+      - '.github/workflows/example-rerun-viz.yml'
+  schedule:
+    # 毎週月曜 10:00 UTC = 19:00 JST
+    - cron: '0 10 * * 1'
+  workflow_dispatch:
+
+jobs:
+  build-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: system deps for rerun native_viewer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev libatk-bridge2.0-dev \
+            libfontconfig1-dev libfreetype6-dev libglib2.0-dev libgtk-3-dev \
+            libssl-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxkbcommon-dev patchelf
+      # toolchain は examples/rerun-viz/rust-toolchain.toml (1.92.0) を rustup が honor する
+      # stable を override install しない (新しい stable では rerun 0.22 が build できない)
+      - name: build example (pinned toolchain)
+        working-directory: examples/rerun-viz
+        run: cargo build --release

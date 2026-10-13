@@ -1,0 +1,22 @@
+# alice-kinematics の autorig を rerun viewer で可視化する dev 専用 example
+# 公開ライブラリの feature には含めない (rerun + native_viewer は重い依存で MSRV も新しく、
+# 本 crate は rust-toolchain.toml で 1.92.0 に pin して単独 build する)
+# publish = false かつ独自 [workspace] なので、ライブラリの依存解決には一切入らない
+[package]
+name = "alice-kinematics-rerun-viz"
+version = "0.0.0"
+edition = "2021"
+authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
+description = "Dev visualization example for alice-kinematics autorig (rerun viewer, not published)"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[[bin]]
+name = "autorig_rerun_viz"
+path = "src/main.rs"
+
+[dependencies]
+alice-kinematics = { path = "../..", default-features = false, features = ["std"] }
+rerun = { version = "0.22", default-features = false, features = ["sdk", "native_viewer"] }

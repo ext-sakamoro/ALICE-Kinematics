@@ -41,6 +41,16 @@ jobs:
       - name: cargo test (lol bridge)
         working-directory: ALICE-Kinematics
         run: cargo test --lib --tests --features lol
+      - name: library has no rerun dependency (all features)
+        working-directory: ALICE-Kinematics
+        run: |
+          tree=$(cargo tree -e normal,build --all-features)
+          n=$(printf '%s\n' "$tree" | grep -c .)
+          if [ "$n" -eq 0 ]; then echo "no packages checked"; exit 1; fi
+          if printf '%s\n' "$tree" | grep -qiE '(^|[^a-z-])rerun([^a-z-]|$)'; then
+            echo "FAIL: rerun present in library dependency tree"; exit 1
+          fi
+          echo "OK: no rerun in $n dependency lines (all features)"
 
   clippy:
     runs-on: ubuntu-latest

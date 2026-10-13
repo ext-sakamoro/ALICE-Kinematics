@@ -1,0 +1,5 @@
+# rerun 0.22 (native_viewer) を build できる toolchain window に pin
+# 下限: 依存 fixed 1.31 が rustc 1.93 を要求 上限: 1.98.1 では re_viewer_context の
+# trait 評価がオーバーフロー (E0275) するため、その手前の 1.93 系に固定する
+[toolchain]
+channel = "1.93.0"

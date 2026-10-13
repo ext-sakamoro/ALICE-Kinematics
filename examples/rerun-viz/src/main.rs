@@ -1,9 +1,9 @@
 //! autorig 結果を rerun-io/rerun viewer で可視化する example
 //!
-//! 実行:
+//! 実行 (本 crate dir で):
 //!
 //! ```bash
-//! cargo run --example autorig_rerun_viz --features rerun-viz --release
+//! cargo run --release
 //! ```
 //!
 //! rerun viewer が spawn され、以下が log される:
@@ -14,9 +14,8 @@
 //!
 //! # 背景
 //!
-//! image-to-3d §E 系列の auto-rig を実装後、debug 目的で
-//! rerun (Apache-2/MIT、11k★) を dev-dep として統合
-//! release binary には影響なし (feature gate `rerun-viz`)
+//! auto-rig を実装後、debug 目的で rerun (Apache-2/MIT) を可視化に使う
+//! 公開ライブラリ alice-kinematics の feature には含めず、本 dev 専用 crate で単独 build する
 //!
 //! License: MIT
 //! Author: Moroya Sakamoto

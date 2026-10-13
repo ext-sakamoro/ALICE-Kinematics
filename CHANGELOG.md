@@ -7,7 +7,10 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [0.2.1] - 2026-10-13
 
 ### Changed
-- `include` allowlist を Cargo.toml に追加し、配布 package を crate 本体に限定 (`.github/` / `docs/` / `scripts/` / `tests/` / `rust-toolchain.toml` / `CONTRIBUTING.md` を除外) 配布物は 35 → 26 file、code 変更なし
+- `include` allowlist を Cargo.toml に追加し、配布 package を crate 本体に限定 (`.github/` / `docs/` / `scripts/` / `tests/` / `examples/` / `rust-toolchain.toml` / `CONTRIBUTING.md` を除外) code 変更なし
+
+### Removed
+- `rerun-viz` feature と optional な `rerun` 依存をライブラリから削除 dev 可視化は非公開の別 crate `examples/rerun-viz/` (独自 workspace、`publish = false`、`rust-toolchain.toml` 1.92.0 で build) に移動 ライブラリの実行時には不要で、全 feature を安定版 toolchain で build できるようになる
 
 ## [0.2.0] - 2026-10-09
 
