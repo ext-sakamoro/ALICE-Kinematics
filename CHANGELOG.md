@@ -10,6 +10,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ### Changed
 - `rust-toolchain.toml` の pin を 1.92.0 から 1.98.1 に上げた 新しい clippy が指摘する手書きの midpoint `(a + b) * 0.5` は書き換えない (std の `f32::midpoint` は target ごとに実装が違い、結果が subnormal の範囲で bit が違う) crate の root に `clippy.toml` を置いて `f32::midpoint` を禁止し、4 箇所に理由付きで `manual_midpoint` を allow した `IntentEncoder::compression_estimate` の 1 秒あたりの motion 数は `checked_div` で求める (値は同じ) 出力の bit は変わらない
 - CI: 公開 API の互換性を crates.io の最新の alice-kinematics と比べて失敗させる `.github/workflows/semver-checks.yml` (`scripts/semver_gate.py`、ALICE-Law / ALICE-DB ほかと同一) を追加した 既定・既定なし・全 feature の 3 組で cargo semver-checks を走らせる (ALICE-Law release-train.toml は組を宣言しない) 版が公開済みの 0.2.1 と同じ間は次の最小の版 0.2.2 として検査する
+- `lol` feature の `alice-lol` 要求を `0.4` から `>=0.4.1, <0.6` に広げ 公開済の 0.4.1 と 0.5 系の両方で解決できるようにした `IntentNode` への exhaustive match は 0.4.1 と 0.5 系の双方で build と test を確認済 code 変更なし
 
 ## [0.2.1] - 2026-10-13
 
