@@ -5,7 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- `alice-law-conformance.toml` — ALICE-Law の 14 gate (G1-G14) について、この repo の tree を実測して記録した適合宣言 `pass` は 0 件 (committed な gate evidence が無いため)、`fail-known` 9 件 (位置付き)、`unverified` 5 件 (理由付き)
+- `alice-law-conformance.toml` — ALICE-Law の 14 gate (G1-G14) について、この repo の tree を実測して記録した適合状況 `pass` は 0 件 (committed な gate evidence が無いため)、`fail-known` 10 件 (位置付き)、`unverified` 4 件 (理由付き)
 
 ## [0.2.1] - 2026-10-13
 
