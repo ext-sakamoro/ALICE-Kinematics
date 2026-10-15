@@ -11,6 +11,8 @@
 # no such evidence to turn red. `fail-known` says where the requirement is
 # unmet. `unverified` says why the cell could not be decided.
 #
+# The crate is treated as Law-bearing pending the owner's scope decision (see G6).
+#
 # Checked at: 1cc1b09 (origin/main, 2026-10-15).
 
 [G1]
@@ -40,15 +42,15 @@ reference_repo = "ALICE-LOL"
 
 [G6]
 status = "fail-known"
-note = "the crate exports no semantics identifier: src/lib.rs has no SEMANTICS_ID (or equivalent) and the crate has no dependency on alice-det-math or any other Law-bearing crate whose identifier it could fold (Cargo.toml [dependencies] holds only the optional alice-lol bridge). There is accordingly no hex test and no pin-change test. Whether this crate is meant to carry a Law identifier of its own (its f32 arithmetic is its own approximations, see G1) is a design decision for the owner."
+note = "Premise: this manifest treats the crate as Law-bearing, pending the owner's scope decision, so G6 to G8 are judged on that basis. The crate exports no semantics identifier: src/lib.rs has no SEMANTICS_ID (or equivalent) and the crate has no dependency on alice-det-math or any other Law-bearing crate whose identifier it could fold (Cargo.toml [dependencies] holds only the optional alice-lol bridge). There is accordingly no hex test and no pin-change test. Whether the crate stays Law-bearing, and with it the use of its own approximations in place of alice-det-math (see G1), is the owner's scope decision."
 
 [G7]
 status = "unverified"
-note = "audit: the type-erasing boundaries are src/intent.rs:137 Intent::encode / :155 Intent::decode (8-byte packet) and :224 / :244 ExtendedIntent::encode / decode (16 bytes); the crate has no extern \"C\" or no_mangle item, no pyo3 or wasm-bindgen export, no dyn Any or name-keyed registry, and no build.rs or procedural macro (grep over src and Cargo.toml; no build.rs in the tree). The one cross-crate value it takes, alice_lol IntentNode in src/lol_bridge.rs (lol feature), is passed as a concrete Rust type. Whether the Intent packet carries another Law-bearing crate's values (so that a producer identifier must travel with it) cannot be answered while the crate has no identifier (G6). Not claimed as n/a: that status needs a scanner finding zero sites with the mutant of adding one, and there is none."
+note = "audit: the type-erasing boundaries are src/intent.rs:137 Intent::encode / :155 Intent::decode (8-byte packet) and :224 / :244 ExtendedIntent::encode / decode (16 bytes); the crate has no extern \"C\" or no_mangle item, no pyo3 or wasm-bindgen export, no dyn Any or name-keyed registry, and no build.rs or procedural macro (grep over src and Cargo.toml; no build.rs in the tree). None of these boundaries receives another crate's Law-bearing value: decode reads this crate's own packet format, and the one cross-crate value the crate takes, alice_lol IntentNode in src/lol_bridge.rs (lol feature), is passed as a concrete Rust type, which needs no per-value identifier. Not claimed as pass or n/a: pass needs a named mutant over a committed mismatch test, and n/a needs a scanner that finds zero such sites with the mutant of adding one; neither exists here."
 
 [G8]
-status = "unverified"
-note = "undecided: the crate's wire format is the packed Intent (src/intent.rs:137 encode, :155 decode; Q8.8 positions, 1 byte duration, 1 byte flags, no identifier field, and src/intent.rs:224 / :244 for the 16-byte extended form), written so that a receiver reconstructs a trajectory. Whether that packet is a durable form read back later by another release (G8) or an in-exchange stream (G7), and whether its values are Law-bearing, is a decision about the crate's intent that the tree does not answer; the packet has no room for an identifier (all 8 bytes are used), so a G8 identifier would be a format change."
+status = "fail-known"
+note = "the Intent packet is written by src/intent.rs:137 Intent::encode (8 bytes: three Q8.8 positions, 1 byte duration, 1 byte flags) and :224 ExtendedIntent::encode (16 bytes), and read back by :155 Intent::decode and :244 ExtendedIntent::decode, with no identifier field in either format and no check of one in either reader: all 8 bytes of the base packet are used (src/intent.rs:98-103 layout), so an identifier is a format change. Under the premise stated in G6 this is the located absence of the persisted identifier, the round-trip test that reads a value written with another identifier, and the mismatch error. Whether the packet is read back by another release (this gate) or only within one exchange (G7) does not change that the packet carries no identifier."
 
 [G9]
 status = "unverified"
