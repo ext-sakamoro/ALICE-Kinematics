@@ -1,0 +1,77 @@
+# ALICE-Law conformance manifest for this crate (alice-kinematics). One entry per
+# gate defined in ALICE-Law's conformance/gates.toml; the schema (status /
+# evidence / mutant / since / note / reference_repo) is the "Manifest" section
+# of docs/CONFORMANCE.md in that repository.
+#
+# Every entry is written from what this repository's tree at the commit below
+# shows, checked directly (cargo test on the default, encoder and lol feature
+# sets; the CI clippy command; a grep over src, tests, examples and the
+# workflows). No cell is `pass`: a `pass` needs a named mutant that turns
+# committed evidence red, and this repository has no Law gate yet, so there is
+# no such evidence to turn red. `fail-known` says where the requirement is
+# unmet. `unverified` says why the cell could not be decided.
+#
+# Checked at: 1cc1b09 (origin/main, 2026-10-15).
+
+[G1]
+status = "fail-known"
+note = "the requirement is absent: there is no clippy.toml / .clippy.toml (no disallowed-methods list for f32 and f64), and the only clippy step, .github/workflows/ci.yml:78 `cargo clippy --lib --tests --features encoder -- -W clippy::all -W clippy::pedantic`, neither bans a method nor builds the std and lol feature sets, and there is no canary. Today's tree has no call of a banned method in src (grep for the 25 banned names over src: 0), because the crate is #![no_std] (src/lib.rs:39), where f32::sin and the like do not compile; that is a property of the default and encoder builds, not a gate: with `--features std` (and lol, which enables std, Cargo.toml) a probe function calling sin, cos, powf, exp, ln and sin_cos added to src/lib.rs compiled and passed the CI clippy command unchanged (rc 0, measured 2026-10-15, reverted). powi is called once, in test code (src/encoder.rs:230, inside #[cfg(test)]), and is not banned. The library's own transcendental approximations (src/joint.rs sin_approx / acos_approx / fast_sqrt, src/jerk.rs log2_approx / fast_sqrt_jerk, src/autorig/hypothesis.rs cos_approx / sin_approx) are polynomial and bit-trick code, not alice-det-math; the crate has no dependency on alice-det-math (Cargo.toml). Whether those approximations are acceptable in place of alice-det-math is a decision about the crate's role as a Law-bearing crate, not answered by the tree."
+reference_repo = "ALICE-Analytics"
+
+[G2]
+status = "fail-known"
+note = "no Law helper for max/min and no default-deny manifest of raw_* exceptions exist, and no clippy ban on f32::max / f32::min. The library calls f32 max/min directly at src/jerk.rs:182 (`.max(1e-12)`) and :198 (`.min(1.0)` then `.max(1e-6)`; both in the encoder-gated jerk module), and f32::clamp (whose NaN and signed-zero handling is also platform-visible, not named by the gate) at src/jerk.rs:272, src/hand.rs:238, src/joint.rs:436, src/autorig/skinning.rs:88, src/lol_bridge.rs:276 and :286; the other min calls in src (src/autorig/hypothesis.rs:319-323, src/autorig/slice.rs:179, src/joint.rs:217) are usize. A probe function calling x.max(0.5) and x.min(2.0) added under the std feature passed the CI clippy command (rc 0, measured 2026-10-15, reverted). The crate builds no SIMD path (grep for target_feature, core::arch, std::arch, simd over src and Cargo.toml: 0), so the per-width test list is empty."
+reference_repo = "ALICE-Analytics"
+
+[G3]
+status = "fail-known"
+note = "no checker for an outer negation of an fma result exists (no script in scripts/, no ci.yml step). The library, tests and examples contain no mul_add at all (grep over src, tests, examples: 0), so today's tree has no such site; that is an audit, not a gate: a probe `-(x.mul_add(2.0, 1.0))` added under the std feature passed the CI clippy command (rc 0, measured 2026-10-15, reverted), so a later outer negation would not turn anything red. Not n/a: that status needs a scanner that finds zero sites and the mutant of adding one, and there is no scanner."
+reference_repo = "ALICE-LOL"
+
+[G4]
+status = "fail-known"
+note = "no signed-zero or exact-cancellation golden test exists: tests/ holds tests/analytic_oracle.rs (tolerance-based comparisons against closed-form or f64 references) and tests/autorig_integration.rs, neither compares against a fixed expected bit pattern, and the library tests assert f32::EPSILON-level closeness (src/predictor.rs:488,548; src/lol_bridge.rs:326). CI runs the tests on one leg, ubuntu-latest (x86_64) in debug (.github/workflows/ci.yml:15,37,40,43): no release profile, no aarch64 runner, so the four {debug, release} x {x86_64, aarch64} legs are not present as required jobs."
+reference_repo = "ALICE-LOL"
+
+[G5]
+status = "fail-known"
+note = "no CI step runs the test suite under the release profile and no job uses an aarch64 runner: .github/workflows/ci.yml:37,40,43 are `cargo test --lib --tests` (with and without --features encoder, --features lol) without --release, all on ubuntu-latest (ci.yml:15); the other workflow, .github/workflows/example-rerun-viz.yml:29, is also ubuntu-latest and builds the non-library example only."
+reference_repo = "ALICE-LOL"
+
+[G6]
+status = "fail-known"
+note = "the crate exports no semantics identifier: src/lib.rs has no SEMANTICS_ID (or equivalent) and the crate has no dependency on alice-det-math or any other Law-bearing crate whose identifier it could fold (Cargo.toml [dependencies] holds only the optional alice-lol bridge). There is accordingly no hex test and no pin-change test. Whether this crate is meant to carry a Law identifier of its own (its f32 arithmetic is its own approximations, see G1) is a design decision for the owner."
+
+[G7]
+status = "unverified"
+note = "audit: the type-erasing boundaries are src/intent.rs:137 Intent::encode / :155 Intent::decode (8-byte packet) and :224 / :244 ExtendedIntent::encode / decode (16 bytes); the crate has no extern \"C\" or no_mangle item, no pyo3 or wasm-bindgen export, no dyn Any or name-keyed registry, and no build.rs or procedural macro (grep over src and Cargo.toml; no build.rs in the tree). The one cross-crate value it takes, alice_lol IntentNode in src/lol_bridge.rs (lol feature), is passed as a concrete Rust type. Whether the Intent packet carries another Law-bearing crate's values (so that a producer identifier must travel with it) cannot be answered while the crate has no identifier (G6). Not claimed as n/a: that status needs a scanner finding zero sites with the mutant of adding one, and there is none."
+
+[G8]
+status = "unverified"
+note = "undecided: the crate's wire format is the packed Intent (src/intent.rs:137 encode, :155 decode; Q8.8 positions, 1 byte duration, 1 byte flags, no identifier field, and src/intent.rs:224 / :244 for the 16-byte extended form), written so that a receiver reconstructs a trajectory. Whether that packet is a durable form read back later by another release (G8) or an in-exchange stream (G7), and whether its values are Law-bearing, is a decision about the crate's intent that the tree does not answer; the packet has no room for an identifier (all 8 bytes are used), so a G8 identifier would be a format change."
+
+[G9]
+status = "unverified"
+note = "depends on G8 (the persisted identifier whose history G9 audits), which is undecided, and on G6, since the crate has no identifier whose history could be audited. CHANGELOG.md records no identifier move."
+
+[G10]
+status = "fail-known"
+note = "no lint or scan bans run-varying sources: there is no clippy.toml (so no disallowed-methods / disallowed-types for SystemTime::now, Instant::now, thread_rng, RandomState) and no scan step in .github/workflows/ci.yml or scripts/. Today's tree reads none of them: a grep for SystemTime, Instant, thread_rng, rand::, Uuid, from_entropy, RandomState, HashMap, HashSet, rayon and thread:: over src, tests and examples matches only examples/rerun-viz/Cargo.lock (the non-library example's lock file), and the library is #![no_std] (src/lib.rs:39) with the std feature empty (Cargo.toml: std = []); the jerk module takes timestamps as input (MotionSample, src/jerk.rs:20). That is a one-off grep, not a gate."
+reference_repo = "ALICE-Analytics"
+
+[G11]
+status = "unverified"
+note = "no Law gate is implemented in this repository (see G1 to G5, G10, G12, G14), so there is no checker for which a canary, a run-nothing failure and a copy check could be named; the cell becomes decidable when the first gate lands. The one existing checker of this kind, the ci.yml step `library has no rerun dependency (all features)` (ci.yml:44-53), exits 1 when it checked zero packages, but it is not one of the gates G11 enumerates. No checker or helper is shared byte-for-byte with another repository, so clause (c) has no site."
+
+[G12]
+status = "fail-known"
+note = "no CI job runs ALICE-Law's scripts/public_text_check.py: .github/workflows/ has ci.yml and example-rerun-viz.yml only, and scripts/ holds preflight.sh only (no fetch of the script, no revision pin, no copy). Run once by hand against this tree at 1cc1b09 (`public_text_check.py --tree HEAD`), the script reported `0 findings in 38 files` (rc 0, measured 2026-10-15), so the text is clean today; the job that keeps it so is absent."
+reference_repo = "ALICE-Analytics"
+
+[G13]
+status = "unverified"
+note = "audit: no HashMap or HashSet, no rayon, no thread spawn and no par_iter in src, tests or examples (grep, see G10), so no Law-bearing output reads an unspecified order today. It is not pass because there is no lint banning HashMap / HashSet iteration or reasoned allowlist and no ordered-reduction test, and not n/a because that status needs a scanner finding zero sites with the mutant of adding one; a one-off grep is neither."
+
+[G14]
+status = "fail-known"
+note = "the build configuration sets no fast-math-style flag and no target-cpu=native: there is no .cargo directory and no build.rs, the only RUSTFLAGS is `-Dwarnings` (.github/workflows/ci.yml:11), and Cargo.toml [profile.release] sets opt-level 3, lto fat, codegen-units 1, panic abort, strip (searched at 1cc1b09). Unmet: no scan step in CI keeps that true, and no test asserts round-to-nearest-even or that subnormals are not flushed to zero (the gate names two tests; the repository has neither: grep for MIN_POSITIVE, subnormal, denormal over tests and src finds none that assert it)."
