@@ -128,6 +128,17 @@ jobs:
       - name: clippy (encoder)
         working-directory: ALICE-Kinematics
         run: cargo clippy --lib --tests --features encoder -- -W clippy::all -W clippy::pedantic
+      # the G1 list in clippy.toml can only fire where f32 / f64 methods exist:
+      # the default build is no_std, so std and lol (which enables std) are
+      # linted too. RUSTFLAGS=-Dwarnings makes every lint an error
+      - name: clippy (std, all targets)
+        working-directory: ALICE-Kinematics
+        run: cargo clippy --all-targets --features std -- -W clippy::all -W clippy::pedantic
+      # Not pedantic: src/lol_bridge.rs trips pedantic lints that are not part
+      # of this gate; the disallowed lists of clippy.toml are on by default
+      - name: clippy (all features, all targets)
+        working-directory: ALICE-Kinematics
+        run: cargo clippy --all-targets --all-features
       # the lists in clippy.toml only gate anything if clippy flags a call to
       # them: a throwaway crate with the same clippy.toml plants one banned call
       # per row of scripts/clippy_canary_calls.tsv (0 rows fail). The rows are

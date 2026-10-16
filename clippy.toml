@@ -7,8 +7,69 @@
 # round differently, so the same inputs give different bits by target. The crate writes
 # (a + b) * 0.5, which is the same on every target, and allows clippy::manual_midpoint at
 # those sites with this reason. f64::midpoint has one implementation for every target and
-# is not listed. The rest of the determinism ban list (the libm methods) is not here yet:
-# see G1 in alice-law-conformance.toml
+# is not listed.
+#
+# Determinism gate (ALICE-Law G1): the f32 / f64 methods whose results IEEE 754
+# does not require to be correctly rounded, so the platform libm may differ
+# between OS, CPU and compiler. The entries are the f32 / f64 method part of
+# the lists ALICE-DB and alice-zip use (52 entries, powi included, the pending
+# default). The crate is no_std by default, where these do not compile; the
+# std and lol builds can call them, and CI lints those builds with -D warnings.
+# The crate has no libm dependency, so no libm free function can be named.
+# Test helpers whose expected value must not come from the code under test
+# carry a scoped #[expect] with the reason.
 disallowed-methods = [
     { path = "f32::midpoint", reason = "target-dependent std implementation (f64 on x86_64 / aarch64 / wasm, f32 elsewhere): bits differ by target at subnormal results; write (a + b) * 0.5" },
+    { path = "f32::sin", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::cos", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::sin_cos", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::tan", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::asin", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::acos", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::atan", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::atan2", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::sinh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::cosh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::tanh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::asinh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::acosh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::atanh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::exp", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::exp2", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::exp_m1", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::ln", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::ln_1p", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::log", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::log2", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::log10", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::powf", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::cbrt", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::hypot", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f32::powi", reason = "lowers to a multiplication tree of unspecified association order; use alice_det_math::powi" },
+    { path = "f64::sin", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::cos", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::sin_cos", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::tan", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::asin", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::acos", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::atan", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::atan2", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::sinh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::cosh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::tanh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::asinh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::acosh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::atanh", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::exp", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::exp2", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::exp_m1", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::ln", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::ln_1p", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::log", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::log2", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::log10", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::powf", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::cbrt", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::hypot", reason = "platform libm is not cross-platform bit-exact; use alice_det_math" },
+    { path = "f64::powi", reason = "lowers to a multiplication tree of unspecified association order; write the multiplications out" },
 ]

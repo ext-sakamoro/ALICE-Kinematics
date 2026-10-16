@@ -24,6 +24,14 @@ step "ci.yml / clippy: clippy (encoder)"
 relint
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo clippy --lib --tests --features encoder -- -W clippy::all -W clippy::pedantic )
 
+step "ci.yml / clippy: clippy (std, all targets)"
+relint
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo clippy --all-targets --features std -- -W clippy::all -W clippy::pedantic )
+
+step "ci.yml / clippy: clippy (all features, all targets)"
+relint
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo clippy --all-targets --all-features )
+
 step "ci.yml / clippy: Clippy canary data (generator tests)"
 python3 scripts/test_gen_clippy_canary_calls.py
 

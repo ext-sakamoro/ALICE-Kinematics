@@ -44,6 +44,10 @@ use alice_kinematics::joint::{rotate_vec, ArmChain, JointConstraint, Vec3k};
 use alice_kinematics::predictor::{Predictor, QuinticCoeffs};
 use alice_kinematics::skeleton::{BoneId, Skeleton};
 
+#[expect(
+    clippy::disallowed_methods,
+    reason = "closed-form oracle: the expected value must come from an independent f64 reference, not from the crate under test, and its tolerance absorbs a few ulp of platform libm"
+)]
 fn s_of(tau: f64) -> f64 {
     10.0 * tau.powi(3) - 15.0 * tau.powi(4) + 6.0 * tau.powi(5)
 }
@@ -51,6 +55,10 @@ fn s_of(tau: f64) -> f64 {
 // ───────────────────────── minimum-jerk quintic ───────────────────────────
 
 #[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "closed-form oracle: the expected value must come from an independent f64 reference, not from the crate under test, and its tolerance absorbs a few ulp of platform libm"
+)]
 fn quintic_rest_to_rest_is_the_flash_hogan_polynomial() {
     let (x0, xf, t_total) = (0.2f32, 1.7f32, 0.8f32);
     let q = QuinticCoeffs::from_boundary(x0, 0.0, 0.0, xf, t_total);
@@ -150,6 +158,10 @@ fn quintic_boundary_conditions_hold_for_any_start_state() {
 
 #[cfg(feature = "encoder")]
 #[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "closed-form oracle: the expected value must come from an independent f64 reference, not from the crate under test, and its tolerance absorbs a few ulp of platform libm"
+)]
 fn jerk_cost_and_fitts_law_match_their_closed_forms() {
     use alice_kinematics::jerk::{fitts_law_duration, minimum_jerk_cost};
     // ∫₀ᵀ (d³x/dt³)² dt for the rest-to-rest quintic = 720 D²/T⁵
@@ -174,6 +186,10 @@ fn jerk_cost_and_fitts_law_match_their_closed_forms() {
 
 // ───────────────────────── rotation / forward kinematics ──────────────────
 
+#[expect(
+    clippy::disallowed_methods,
+    reason = "closed-form oracle: the expected value must come from an independent f64 reference, not from the crate under test, and its tolerance absorbs a few ulp of platform libm"
+)]
 fn rodrigues64(v: [f64; 3], k: [f64; 3], theta: f64) -> [f64; 3] {
     let n = (k[0] * k[0] + k[1] * k[1] + k[2] * k[2]).sqrt();
     let k = [k[0] / n, k[1] / n, k[2] / n];
@@ -196,6 +212,10 @@ fn rodrigues64(v: [f64; 3], k: [f64; 3], theta: f64) -> [f64; 3] {
 const ROT_BOUND: f64 = 5e-3;
 
 #[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "closed-form oracle: the expected value must come from an independent f64 reference, not from the crate under test, and its tolerance absorbs a few ulp of platform libm"
+)]
 fn rotate_vec_is_rodrigues_and_preserves_length() {
     let v = Vec3k::new(0.3, -0.7, 0.2);
     for k in [
@@ -243,6 +263,10 @@ fn rotate_vec_is_rodrigues_and_preserves_length() {
 }
 
 #[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "closed-form oracle: the expected value must come from an independent f64 reference, not from the crate under test, and its tolerance absorbs a few ulp of platform libm"
+)]
 fn right_arm_forward_kinematics_matches_an_independent_rodrigues_chain() {
     let mut arm = ArmChain::right_arm();
     let total: f32 = arm.total_length();

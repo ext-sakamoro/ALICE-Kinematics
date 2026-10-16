@@ -217,6 +217,10 @@ impl IntentEncoder {
 mod tests {
     use super::*;
 
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "test input only: a smooth reaching profile; its exact bits are not compared against anything"
+    )]
     fn make_reaching_samples(count: usize, target_x: f32) -> alloc::vec::Vec<SensorSample> {
         let mut samples = alloc::vec::Vec::new();
         for i in 0..count {
