@@ -1,0 +1,14 @@
+# clippy configuration of alice-kinematics
+#
+# std's f32::midpoint is chosen per target: on x86_64, aarch64, wasm32/64, riscv and
+# loongarch with the d extension, and arm with vfp2 it computes ((a as f64 + b as f64) *
+# 0.5) as f32 (one rounding); elsewhere (thumbv7em and other targets without 64-bit
+# hardware floats) it computes (a + b) * 0.5 in f32. Where the result is subnormal the two
+# round differently, so the same inputs give different bits by target. The crate writes
+# (a + b) * 0.5, which is the same on every target, and allows clippy::manual_midpoint at
+# those sites with this reason. f64::midpoint has one implementation for every target and
+# is not listed. The rest of the determinism ban list (the libm methods) is not here yet:
+# see G1 in alice-law-conformance.toml
+disallowed-methods = [
+    { path = "f32::midpoint", reason = "target-dependent std implementation (f64 on x86_64 / aarch64 / wasm, f32 elsewhere): bits differ by target at subnormal results; write (a + b) * 0.5" },
+]

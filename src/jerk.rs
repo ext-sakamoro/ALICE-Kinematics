@@ -178,6 +178,10 @@ impl JerkFitter {
             let mut lo = 0.0f32;
             let mut hi = 1.0 / duration;
             for _ in 0..48 {
+                #[allow(
+                    clippy::manual_midpoint,
+                    reason = "f32::midpoint is target-dependent (f64 on x86_64 / aarch64 / wasm, f32 elsewhere) and its bits differ by target at subnormal results; banned in clippy.toml"
+                )]
                 let x = 0.5 * (lo + hi);
                 let r = s_profile(t_mid * x) / s_profile(duration * x).max(1e-12);
                 if r < ratio {
@@ -186,6 +190,10 @@ impl JerkFitter {
                     hi = x;
                 }
             }
+            #[allow(
+                clippy::manual_midpoint,
+                reason = "f32::midpoint is target-dependent (f64 on x86_64 / aarch64 / wasm, f32 elsewhere) and its bits differ by target at subnormal results; banned in clippy.toml"
+            )]
             let x = 0.5 * (lo + hi);
             if x > 1e-9 {
                 1.0 / x

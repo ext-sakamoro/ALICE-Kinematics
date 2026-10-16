@@ -735,6 +735,10 @@ mod tests {
     #[test]
     fn test_joint_limit_weight() {
         let c = JointConstraint::new(0.0, 90.0);
+        #[allow(
+            clippy::manual_midpoint,
+            reason = "f32::midpoint is target-dependent (f64 on x86_64 / aarch64 / wasm, f32 elsewhere) and its bits differ by target at subnormal results; banned in clippy.toml"
+        )]
         let mid = (c.min_rad + c.max_rad) * 0.5;
         for dir in [1.0, -1.0] {
             let w_mid = joint_limit_weight(mid, dir, &c);

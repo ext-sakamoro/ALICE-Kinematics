@@ -423,6 +423,10 @@ pub fn hypothesis_to_skeleton(hypothesis: &SkeletonHypothesis, nm: &NormalizedMe
             );
         } else {
             // ルートが missing = 中心 (bbox 中心)
+            #[allow(
+                clippy::manual_midpoint,
+                reason = "f32::midpoint is target-dependent (f64 on x86_64 / aarch64 / wasm, f32 elsewhere) and its bits differ by target at subnormal results; banned in clippy.toml"
+            )]
             let center = Vec3k::new(
                 (nm.original_min.x + nm.original_max.x) * 0.5,
                 (nm.original_min.y + nm.original_max.y) * 0.5,
