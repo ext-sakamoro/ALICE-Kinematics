@@ -46,4 +46,11 @@ step "ci.yml / test: cargo test (encoder)"
 step "ci.yml / test: cargo test (lol bridge)"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo test --lib --tests --features lol )
 
+step "semver-checks.yml / semver-checks: semver gate (tests)"
+python3 scripts/test_semver_gate.py
+
+step "semver-checks.yml / semver-checks: semver gate (latest crates.io release, every consumer feature set)"
+need cargo-semver-checks "cargo install cargo-semver-checks --version 0.50.0 --locked"
+python3 scripts/semver_gate.py --config .github/semver-gate.toml --target-dir "${CARGO_TARGET_DIR:-target}/semver"
+
 echo; echo "preflight OK"
