@@ -63,3 +63,16 @@ pub mod lol_bridge;
 pub use intent::{Intent, IntentFlags, IntentType};
 pub use joint::{ArmChain, Joint, JointConstraint, Vec3k};
 pub use predictor::Predictor;
+
+/// Lint probe for the clippy steps of CI (`scripts/clippy_lint_probe.py`)
+///
+/// Compiled only with `--cfg alice_lint_probe`, which no build sets except
+/// that check: it reruns a clippy step with the cfg on and fails unless clippy
+/// reports this call (the G1 ban list in clippy.toml), which shows that the
+/// step lints the `std` build where the banned methods exist
+#[cfg(all(alice_lint_probe, feature = "std"))]
+#[doc(hidden)]
+#[must_use]
+pub fn alice_lint_probe(x: f32) -> f32 {
+    x.sin()
+}

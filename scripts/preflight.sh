@@ -32,6 +32,13 @@ step "ci.yml / clippy: clippy (all features, all targets)"
 relint
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo clippy --all-targets --all-features )
 
+step "ci.yml / clippy: clippy lint probe (checker tests)"
+python3 scripts/test_clippy_lint_probe.py
+
+step "ci.yml / clippy: clippy lint probe (std and all-features steps reach the std build)"
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; python3 scripts/clippy_lint_probe.py -- cargo clippy --all-targets --features std -- -W clippy::all -W clippy::pedantic )
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; python3 scripts/clippy_lint_probe.py -- cargo clippy --all-targets --all-features )
+
 step "ci.yml / clippy: Clippy canary data (generator tests)"
 python3 scripts/test_gen_clippy_canary_calls.py
 

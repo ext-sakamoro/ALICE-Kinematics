@@ -2,9 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # ci/**: the same checks on a branch before it is fast-forwarded to main
+    branches: [main, 'ci/**']
   pull_request:
     branches: [main]
+
+# a newer commit on the same branch stops the older run; on main every commit
+# gets its own group and is not stopped
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -139,6 +146,18 @@ jobs:
       - name: clippy (all features, all targets)
         working-directory: ALICE-Kinematics
         run: cargo clippy --all-targets --all-features
+      # the two steps above must reach the std build: rerun each with
+      # --cfg alice_lint_probe (one f32::sin at the end of src/lib.rs) and fail
+      # unless clippy reports it there (0 reports = the step lints nothing
+      # where the G1 list can fire)
+      - name: clippy lint probe (checker tests)
+        working-directory: ALICE-Kinematics
+        run: python3 scripts/test_clippy_lint_probe.py
+      - name: clippy lint probe (std and all-features steps reach the std build)
+        working-directory: ALICE-Kinematics
+        run: |
+          python3 scripts/clippy_lint_probe.py -- cargo clippy --all-targets --features std -- -W clippy::all -W clippy::pedantic
+          python3 scripts/clippy_lint_probe.py -- cargo clippy --all-targets --all-features
       # the lists in clippy.toml only gate anything if clippy flags a call to
       # them: a throwaway crate with the same clippy.toml plants one banned call
       # per row of scripts/clippy_canary_calls.tsv (0 rows fail). The rows are
