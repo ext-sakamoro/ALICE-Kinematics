@@ -6,9 +6,9 @@
 # Every entry is written from what this repository's tree at the commit below
 # shows, checked directly (cargo test on the default, encoder and lol feature
 # sets; the CI clippy command; a grep over src, tests, examples and the
-# workflows). No cell is `pass`: a `pass` needs a named mutant that turns
-# committed evidence red, and this repository has no Law gate yet, so there is
-# no such evidence to turn red. `fail-known` says where the requirement is
+# workflows). A `pass` needs a named mutant that turns committed evidence red;
+# G12 and G14 have one (their cells name the mutant and when it was measured).
+# `fail-known` says where the requirement is
 # unmet. `unverified` says why the cell could not be decided.
 #
 # The crate is treated as Law-bearing pending the owner's scope decision (see G6).
@@ -71,9 +71,17 @@ mutant = "measured 2026-10-16, each reverted: deleting the f32::midpoint entry (
 note = "unmet: clause (c). scripts/clippy_canary.py, scripts/test_clippy_canary.py, scripts/gen_clippy_canary_calls.py and scripts/test_gen_clippy_canary_calls.py are meant to be byte-identical across the ALICE crates that carry them (scripts/clippy_canary_calls.tsv is generated per repository from its own clippy.toml), but nothing in this repository or its CI compares them with their source, so a drift would pass. Met: (a) and (b) for the clippy list (the canary and the generator above). The other gates (G1 to G5, G10, G12, G14) have no checker here, so there is nothing else to name a canary or a run-nothing failure for. The ci.yml step `library has no rerun dependency (all features)` (ci.yml:44-53) exits 1 when it checked zero packages, but it is not one of the gates G11 enumerates."
 
 [G12]
-status = "fail-known"
-note = "no CI job runs ALICE-Law's scripts/public_text_check.py: .github/workflows/ has ci.yml and example-rerun-viz.yml only, and scripts/ holds preflight.sh only (no fetch of the script, no revision pin, no copy). Run once by hand against this tree at 1cc1b09 (`public_text_check.py --tree HEAD`), the script reported `0 findings in 38 files` (rc 0, measured 2026-10-15), so the text is clean today; the job that keeps it so is absent."
-reference_repo = "ALICE-Analytics"
+status = "pass"
+evidence = [
+    ".github/workflows/public-text.yml (pushes to main and ci/**, pull requests to main)",
+    "scripts/public_text.sh (fetches ALICE-Law's scripts/public_text_check.py at the pinned revision, refuses it unless the SHA-256 matches, exits 2 when it compared nothing)",
+    ".github/public-text-pin (rev 779fa443f95bc0caca5ca2d5bdb9156051fd6143, sha256 e439fdd7495e45486b67d57d227f828426b703c0224b8a00d2e8a1c2f1e66594)",
+    "scripts/test_public_text.py",
+    "scripts/preflight.sh (step public-text.yml / public-text)",
+]
+mutant = "in a throwaway clone at this commit, commit a README.md line naming a development-process role and run PUBLIC_TEXT_BASE=<previous commit> scripts/public_text.sh: it reports `found: README.md:148: agent process`, `public text: 1 findings in 61 files at HEAD` and exits 1; the unchanged tree reports `public text: 0 findings in 61 files at HEAD` and exits 0 (measured 2026-10-16)"
+since = ""
+reference_repo = "ALICE-DB"
 
 [G13]
 status = "fail-known"

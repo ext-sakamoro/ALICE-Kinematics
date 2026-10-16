@@ -51,6 +51,10 @@ step "ci.yml / doc: cargo doc"
 step "ci.yml / actionlint: actionlint"
 actionlint .github/workflows/*.yml
 
+step "public-text.yml / public-text: Public text (ALICE-Law checker at the pin; tree, then the commits)"
+python3 scripts/test_public_text.py
+scripts/public_text.sh
+
 if [[ $quick -eq 1 ]]; then
   echo; echo "preflight --quick OK (test / bench suites skipped)"; exit 0
 fi
