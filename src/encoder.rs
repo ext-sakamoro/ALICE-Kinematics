@@ -207,11 +207,7 @@ impl IntentEncoder {
         // Raw: 3 × f32 × sample_rate = 12 × sample_rate bytes/s
         let raw = 12 * sample_rate_hz;
         // Intent: 8 bytes per motion, ~(1000/duration) motions per second
-        let motions_per_sec = if avg_motion_duration_ms > 0 {
-            1000 / avg_motion_duration_ms
-        } else {
-            1
-        };
+        let motions_per_sec = 1000_u32.checked_div(avg_motion_duration_ms).unwrap_or(1);
         let intent = 8 * motions_per_sec;
         (raw, intent)
     }
@@ -308,6 +304,24 @@ mod tests {
         assert_eq!(intent, 40);
         // Ratio: 300x
         assert!(raw / intent >= 100);
+    }
+
+    /// A zero duration counts one motion per second, and every other duration gives
+    /// `1000 / duration` (the integer division written out as the reference)
+    #[test]
+    fn compression_estimate_motions_per_second_matches_the_division() {
+        assert_eq!(IntentEncoder::compression_estimate(1000, 0).1, 8);
+        for d in (0..=2048).chain([u32::MAX - 1, u32::MAX]) {
+            let expected = match d {
+                0 => 1,
+                d => 1000 / d,
+            };
+            assert_eq!(
+                IntentEncoder::compression_estimate(1, d).1,
+                8 * expected,
+                "duration {d}"
+            );
+        }
     }
 
     #[test]
