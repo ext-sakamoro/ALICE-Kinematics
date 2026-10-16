@@ -8,3 +8,4 @@
 
 # python bytecode from scripts/
 __pycache__/
+/tools/no-outer-fneg-of-fma/target/
