@@ -7,6 +7,9 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ### Added
 - `alice-law-conformance.toml` — ALICE-Law の 14 gate (G1-G14) について、この repo の tree を実測して記録した適合状況 `pass` は 0 件 (committed な gate evidence が無いため)、`fail-known` 11 件 (位置付き)、`unverified` 3 件 (理由付き)
 
+### Changed
+- `rust-toolchain.toml` の pin を 1.92.0 から 1.98.1 に上げた 新しい clippy が指摘する手書きの midpoint `(a + b) * 0.5` は書き換えない (std の `f32::midpoint` は target ごとに実装が違い、結果が subnormal の範囲で bit が違う) crate の root に `clippy.toml` を置いて `f32::midpoint` を禁止し、4 箇所に理由付きで `manual_midpoint` を allow した `IntentEncoder::compression_estimate` の 1 秒あたりの motion 数は `checked_div` で求める (値は同じ) 出力の bit は変わらない
+
 ## [0.2.1] - 2026-10-13
 
 ### Changed

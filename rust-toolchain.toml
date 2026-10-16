@@ -1,9 +1,10 @@
 # Rust toolchain pin
 # この pin は clippy pedantic を安定させるためのもの (以前は rerun 連携も理由だったが
-# rerun は examples/rerun-viz/ の別 crate に分離済) 新しい clippy は本 crate の手書き
-# midpoint / checked division を lint するため、それらを書き換える (code 変更) まで
-# 1.92.0 に固定する 書き換え + unpin は別 version (0.2.2 以降) で対応する
+# rerun は examples/rerun-viz/ の別 crate に分離済) 1.92.0 から上げる時に新しい clippy が
+# 指摘した手書きの midpoint は f32::midpoint の実装が target ごとに違うので書き換えず
+# (clippy.toml で f32::midpoint を禁止し、(a + b) * 0.5 に理由付きで allow)、checked division は
+# checked_div に書き換えた cargo-semver-checks 0.50 は rustc 1.93 以上を要る
 [toolchain]
-channel = "1.92.0"
+channel = "1.98.1"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
