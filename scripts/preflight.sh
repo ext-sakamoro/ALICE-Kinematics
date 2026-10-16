@@ -36,6 +36,12 @@ python3 scripts/test_clippy_canary.py
 step "ci.yml / clippy: Clippy canary (every planted banned call is flagged)"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; python3 scripts/clippy_canary.py )
 
+step "ci.yml / float-environment: run_tests.sh and build configuration guard (tests, then check)"
+python3 scripts/test_run_tests.py
+python3 scripts/test_build_config_guard.py
+python3 scripts/build_config_guard.py
+python3 scripts/test_build_flags_check.py
+
 step "ci.yml / fmt: run"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo fmt -- --check )
 
@@ -57,6 +63,15 @@ step "ci.yml / test: cargo test (encoder)"
 
 step "ci.yml / test: cargo test (lol bridge)"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo test --lib --tests --features lol )
+
+step "ci.yml / float-environment: Float environment (debug and release)"
+scripts/run_tests.sh float_environment=2 -- cargo test --test float_environment
+scripts/run_tests.sh float_environment=2 -- cargo test --release --test float_environment
+
+step "ci.yml / float-environment: Effective rustc flags (default, encoder, all features)"
+python3 scripts/build_flags_check.py -- cargo check --release --lib
+python3 scripts/build_flags_check.py -- cargo check --release --lib --features encoder
+python3 scripts/build_flags_check.py -- cargo check --release --lib --all-features
 
 step "semver-checks.yml / semver-checks: semver gate (tests)"
 python3 scripts/test_semver_gate.py
