@@ -63,7 +63,12 @@ reference_repo = "ALICE-Analytics"
 
 [G11]
 status = "unverified"
-note = "no Law gate is implemented in this repository (see G1 to G5, G10, G12, G14), so there is no checker for which a canary, a run-nothing failure and a copy check could be named; the cell becomes decidable when the first gate lands. The one existing checker of this kind, the ci.yml step `library has no rerun dependency (all features)` (ci.yml:44-53), exits 1 when it checked zero packages, but it is not one of the gates G11 enumerates. No checker or helper is shared byte-for-byte with another repository, so clause (c) has no site."
+evidence = [
+    "scripts/clippy_canary.py with scripts/clippy_canary_calls.tsv and scripts/test_clippy_canary.py (the clippy list of clippy.toml, today its one disallowed-methods entry f32::midpoint: one planted banned call per row must get exactly one disallowed diagnostic naming it, a clean control none, every clippy.toml entry must have exactly one row, planted or skipped with a reason; 0 rows or 0 clippy.toml entries fail as compared nothing; .github/workflows/ci.yml lines 92 and 95, scripts/preflight.sh lines 34 and 37)",
+    "scripts/gen_clippy_canary_calls.py and scripts/test_gen_clippy_canary_calls.py (the data file is generated from clippy.toml, 1 planted and 0 skipped, and CI regenerates it and compares the bytes, so a row cannot be dropped or edited by hand; 0 plantable rows fail; .github/workflows/ci.yml lines 86 and 89, scripts/preflight.sh lines 28 and 31)",
+]
+mutant = "measured 2026-10-16, each reverted: deleting the f32::midpoint entry (line 13) from clippy.toml makes scripts/gen_clippy_canary_calls.py --check exit 1 ('compared nothing: no plantable entry among 0 disallowed-methods / disallowed-types entries of clippy.toml'); deleting the f32::midpoint row from scripts/clippy_canary_calls.tsv makes --check exit 1 ('clippy_canary_calls.tsv is out of date: 1 line(s) differ')"
+note = "unmet: clause (c). scripts/clippy_canary.py, scripts/test_clippy_canary.py, scripts/gen_clippy_canary_calls.py and scripts/test_gen_clippy_canary_calls.py are meant to be byte-identical across the ALICE crates that carry them (scripts/clippy_canary_calls.tsv is generated per repository from its own clippy.toml), but nothing in this repository or its CI compares them with their source, so a drift would pass. Met: (a) and (b) for the clippy list (the canary and the generator above). The other gates (G1 to G5, G10, G12, G14) have no checker here, so there is nothing else to name a canary or a run-nothing failure for. The ci.yml step `library has no rerun dependency (all features)` (ci.yml:44-53) exits 1 when it checked zero packages, but it is not one of the gates G11 enumerates."
 
 [G12]
 status = "fail-known"
