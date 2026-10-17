@@ -21,6 +21,10 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 - `lol` feature の `alice-lol` 要求を `0.4` から `>=0.4.1, <0.6` に広げ 公開済の 0.4.1 と 0.5 系の両方で解決できるようにした `IntentNode` への exhaustive match は 0.4.1 と 0.5 系の双方で build と test を確認済 code 変更なし
 - CI: clippy の禁止一覧の canary (`scripts/clippy_canary.py`) を追加した 植える呼び出しの表 `scripts/clippy_canary_calls.tsv` は `scripts/gen_clippy_canary_calls.py` が `clippy.toml` から 1 entry 1 行で生成し、CI が再生成して byte で比べる この repo は 1 件 (`disallowed-methods` の `f32::midpoint`、植える) `scripts/clippy_canary.py` / `scripts/test_clippy_canary.py` / `scripts/gen_clippy_canary_calls.py` / `scripts/test_gen_clippy_canary_calls.py` は ALICE-DB と同じ中身
 
+### Fixed
+
+- `alice-law-conformance.toml` の G3 の evidence を、検査器の 3 file (`tools/no-outer-fneg-of-fma/src/main.rs` / `Cargo.toml` / `Cargo.lock`) それぞれの path で始まる 3 項目に分けた ALICE-Law の roster 検査は evidence の先頭の語を main にある path として読むので、`{Cargo.toml,Cargo.lock,src/main.rs}` とまとめた形は存在しない path として拒否されていた
+
 ## [0.2.1] - 2026-10-13
 
 ### Changed
