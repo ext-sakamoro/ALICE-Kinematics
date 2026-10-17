@@ -8,7 +8,7 @@
 //! asserts that a NaN does come out (so the test is not vacuous), and that every NaN that
 //! comes out has the canonical bits. The release build once turned a NaN's sign bit on
 //! inside the arm IK (`src/joint.rs`), so these run under debug and release on `x86_64` and
-//! `aarch64` (`scripts/run_tests.sh nan_boundaries=49` in each leg; 58 with `encoder`, 50 with
+//! `aarch64` (`scripts/run_tests.sh nan_boundaries=50` in each leg; 59 with `encoder`, 51 with
 //! `lol`).
 
 use alice_kinematics::autorig::hypothesis::{
@@ -30,9 +30,11 @@ use alice_kinematics::{
 
 const CANONICAL: u32 = 0x7fc0_0000;
 
-/// a NaN no arithmetic produces by default: sign bit and payload set
+/// a NaN no arithmetic produces by default: sign bit and payload set, opaque to the optimiser
+/// (release folds arithmetic on a constant NaN at compile time, and the folded NaN is the
+/// canonical one: a test fed a plain constant passed with the canonicalisation removed)
 fn odd_nan() -> f32 {
-    f32::from_bits(0xffc0_dead)
+    std::hint::black_box(f32::from_bits(0xffc0_dead))
 }
 
 /// every value is a number or the canonical NaN; returns how many were NaN
@@ -206,6 +208,13 @@ fn boundary_armchain_total_length() {
     let mut arm = ArmChain::right_arm();
     arm.joints[1].link_length = odd_nan();
     assert_canonical("total_length", &[arm.total_length()]);
+}
+
+#[test]
+fn boundary_jointconstraint_new() {
+    // degrees to radians: the payload NaN survives the multiplication
+    let c = JointConstraint::new(odd_nan(), odd_nan());
+    assert_canonical("JointConstraint::new", &[c.min_rad, c.max_rad]);
 }
 
 // ---- hand ----------------------------------------------------------------------------------
@@ -400,7 +409,7 @@ fn boundary_quinticcoeffs_from_boundary() {
     assert_canonical("from_boundary (zero duration)", &instant.c);
 }
 
-// ---- skeleton and auto-rig ------------------------------------------------------------------
+// ---- skeleton and auto-rig: the struct outputs ------------------------------------------
 
 /// a standing cylinder (radius 0.15, height 1.5, 30 rings of 12) that `auto_rig` rigs, one vertex
 /// of its middle ring moved to x = NaN

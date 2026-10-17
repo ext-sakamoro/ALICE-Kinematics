@@ -165,9 +165,10 @@ pub struct JointConstraint {
 impl JointConstraint {
     #[must_use]
     pub const fn new(min_deg: f32, max_deg: f32) -> Self {
+        // a NaN bound leaves as the canonical NaN (ALICE-Law G4, src/nan.rs)
         Self {
-            min_rad: min_deg * (core::f32::consts::PI / 180.0),
-            max_rad: max_deg * (core::f32::consts::PI / 180.0),
+            min_rad: crate::nan::canon_const(min_deg * (core::f32::consts::PI / 180.0)),
+            max_rad: crate::nan::canon_const(max_deg * (core::f32::consts::PI / 180.0)),
         }
     }
 

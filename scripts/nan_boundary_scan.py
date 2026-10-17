@@ -39,6 +39,23 @@ EXEMPT = {
     "Intent::decode": "decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
     "ExtendedIntent::decode": "decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
     "intents": "an iterator of Intent::decode over the packets: decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
+    "Intent::reach": "a constructor that stores the caller's values as given; it computes nothing (as Vec3k::new)",
+    "Intent::grasp": "a constructor that stores the caller's values as given; it computes nothing (as Vec3k::new)",
+    "ExtendedIntent::new": "a constructor that stores the caller's values as given; it computes nothing (as Vec3k::new)",
+    "Joint::new": "a constructor that stores the caller's values as given; it computes nothing (as Vec3k::new); set_angle canonicalises the one value a joint computes",
+    "MeshView::from_vertices": "borrows the caller's vertex slice; it computes nothing",
+    "JointConstraint::free": "built from constants only: no input reaches a float it returns",
+    "ArmChain::right_arm": "built from constants only: no input reaches a float it returns",
+    "Finger::new": "built from constants only: no input reaches a float it returns (a table per FingerType)",
+    "HandModel::right_hand": "built from constants only: no input reaches a float it returns",
+    "HandModel::left_hand": "built from constants only: no input reaches a float it returns",
+    "Predictor::new": "built from constants only: no input reaches a float it returns (zeros)",
+    "Predictor::default": "built from constants only: no input reaches a float it returns (Predictor::new)",
+    "AutoRigConfig::default": "built from constants only: no input reaches a float it returns",
+    "InfluenceRadii::default": "built from constants only: no input reaches a float it returns",
+    "SkeletonHypothesis::default": "built from constants only: no input reaches a float it returns",
+    "HandModel::finger": "returns a reference to the stored value: what a crate computation stores is canonical, the rest is the caller's own write through the pub fields",
+    "HandModel::finger_mut": "returns a reference to the stored value: what a crate computation stores is canonical, the rest is the caller's own write through the pub fields",
     "Skeleton::default_humanoid": "Skeleton::with_height(1.70): no input reaches it, and with_height's "
                                   "output is canonical",
     "distance_based_skinning": "every weight is 0, 1 or 1 / (d² + 1e-6) over the sum of such terms: "
@@ -53,14 +70,7 @@ EXEMPT = {
 #: tracked debt, ordered by exposure (what crosses the wire first). Each entry leaves this list
 #: in the branch that canonicalises its float fields and adds its `boundary_` test; the scan
 #: fails when an entry is no longer an output, or when a new struct-carrier output is not listed
-DEBT = [
-    # constructors, accessors returning stored values, defaults
-    "Intent::reach", "Intent::grasp", "ExtendedIntent::new", "JointConstraint::new",
-    "JointConstraint::free", "Joint::new", "ArmChain::right_arm", "Finger::new",
-    "HandModel::right_hand", "HandModel::left_hand", "HandModel::finger", "HandModel::finger_mut",
-    "Predictor::new", "Predictor::default", "MeshView::from_vertices", "AutoRigConfig::default",
-    "InfluenceRadii::default", "SkeletonHypothesis::default",
-]
+DEBT: list[str] = []
 
 IMPL_RE = re.compile(r"^impl(?:<[^>]*>)?\s+(?:(?P<trait>[\w:<>, ]+?)\s+for\s+)?(?P<ty>\w+)(?:<[^>]*>)?\s*\{")
 FN_RE = re.compile(r"^\s*(?:(?P<pub>pub\s+)|pub\([^)]*\)\s+)?(?:const\s+)?fn\s+(?P<name>\w+)\s*(?:<[^>]*>)?\(")
