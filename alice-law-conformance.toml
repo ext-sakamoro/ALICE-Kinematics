@@ -30,6 +30,12 @@ reference_repo = "ALICE-DB"
 
 [G2]
 status = "pass"
+tie_tests = [
+    "hand grip clamp (src/hand.rs, -0 and a payload NaN): tests/law_max_min_ties.rs::grip_of_nan_gives_the_canonical_nan",
+    "segment projection clamp (src/autorig/skinning.rs, a +0 / -0 projection and a NaN point): tests/law_max_min_ties.rs::segment_distance_at_zero_and_nan_projection",
+    "IK cosine clamp (src/joint.rs, a NaN target): tests/law_max_min_ties.rs::arm_inverse_kinematics_with_a_nan_target",
+    "jerk fit progress max / min (src/jerk.rs, a NaN timestamp): tests/law_max_min_ties.rs::jerk_fit_progress_with_a_nan_timestamp",
+]
 evidence = [
     "Cargo.toml [dependencies] alice-det-math 0.5.1 (default features off, no_std): the Law helpers alice_det_math::max / min (f32), max64 / min64 (f64) and alice_det_math::metric::clamp",
     "library sites routed through them: src/jerk.rs lines 186, 206 and 207 (max / min) and 286 (clamp), src/hand.rs line 238, src/joint.rs line 437, src/autorig/skinning.rs line 88, src/lol_bridge.rs lines 276 and 286 (clamp); test code uses the same helpers (src/autorig/slice.rs lines 303, 307 and 324, tests/analytic_oracle.rs, tests/autorig_integration.rs)",
@@ -108,6 +114,12 @@ reference_repo = "ALICE-DB"
 
 [G8]
 status = "pass"
+writers = [
+    "src/intent.rs::encode",
+    "src/stream.rs::encode",
+]
+legacy_status = "src/stream.rs::Unpinned"
+legacy_policy = "src/stream.rs::RequirePinned"
 evidence = [
     "src/semantics.rs line 96 (KIN_WIRE_SEMANTICS_ID, the fold of KIN_WIRE_SEMANTICS_PINS at line 79: the intent encode, extended intent encode and packet decode scenarios only, d5ae6ab1...ef31ca), distinct from KIN_SEMANTICS_ID (tests/kin_semantics_id.rs the_two_identifiers_differ)",
     "src/stream.rs: the hello frame carries it at bytes 44..76; check compares it first and refuses another with StreamError::WireMismatch { stored, running } (line 151); KIN_PREVIOUS_WIRE_SEMANTICS_IDS (verified earlier identifiers, none yet) are read as VerifiedPrevious; a stream without a hello is StreamStatus::Unpinned under HelloPolicy::AcceptUnpinned (default) and StreamError::Unpinned under RequirePinned; an unknown hello format is StreamError::UnknownFormat",
