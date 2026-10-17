@@ -54,6 +54,12 @@ step "ci.yml / clippy: Clippy canary (every planted banned call is flagged)"
 step "ci.yml / clippy: NaN boundaries (scanner tests, then the scan)"
 python3 scripts/test_nan_boundary_scan.py
 python3 scripts/nan_boundary_scan.py
+
+step "ci.yml / clippy: Order and entropy guards (tests, then the scans)"
+python3 scripts/test_entropy_guard.py
+python3 scripts/test_order_guard.py
+python3 scripts/entropy_guard.py
+python3 scripts/order_guard.py
 step "ci.yml / float-environment: run_tests.sh and build configuration guard (tests, then check)"
 python3 scripts/test_run_tests.py
 python3 scripts/test_build_config_guard.py

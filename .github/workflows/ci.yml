@@ -236,6 +236,17 @@ jobs:
         run: |
           python3 scripts/test_nan_boundary_scan.py
           python3 scripts/nan_boundary_scan.py
+      # ALICE-Law G13 / G10, the source-reading half next to clippy.toml: order_guard reports
+      # every unspecified-order collection, thread / rayon / crossbeam use and ordering normal
+      # dependency in src/ (scripts/order_allowlist.toml, empty: none is allowed);
+      # entropy_guard every OS randomness / wall clock read (its ALLOWED is empty)
+      - name: Order and entropy guards (tests, then the scans)
+        working-directory: ALICE-Kinematics
+        run: |
+          python3 scripts/test_entropy_guard.py
+          python3 scripts/test_order_guard.py
+          python3 scripts/entropy_guard.py
+          python3 scripts/order_guard.py
 
   fmt:
     runs-on: ubuntu-latest

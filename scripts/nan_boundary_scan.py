@@ -9,7 +9,7 @@ each one has its own test in tests/nan_boundaries.rs.
 
 A boundary is:
   - a `pub fn` in src/ whose return type names f32, f64 or Vec3k (arrays, tuples and Options
-    of them included),
+    of them included, and a module-level `type` alias of any of them),
   - a function returning `Self` inside `impl Vec3k` (Vec3k is the crate's float value type),
   - a function of a trait implemented for Vec3k (`impl Add for Vec3k` and the like).
 Constructors returning `Self` of other types are not outputs: their float fields are read
@@ -65,18 +65,31 @@ IMPL_RE = re.compile(r"^impl(?:<[^>]*>)?\s+(?:(?P<trait>[\w:<>, ]+?)\s+for\s+)?(
 FN_RE = re.compile(r"^\s*(?:(?P<pub>pub\s+)|pub\([^)]*\)\s+)?(?:const\s+)?fn\s+(?P<name>\w+)\s*(?:<[^>]*>)?\(")
 STRUCT_RE = re.compile(r"^\s*pub\s+struct\s+(?P<name>\w+)")
 FIELD_RE = re.compile(r"^\s*pub\s+\w+\s*:\s*(?P<ty>[^,]+),?\s*$")
+# a module-level type alias (any visibility): `pub type Angle = f32;` makes `-> Angle` an f32 output
+ALIAS_RE = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?type\s+(?P<name>\w+)\s*(?:<[^=]*>)?\s*=\s*(?P<ty>[^;]+);")
 
 
 def float_types(src: Path) -> set[str]:
     """the crate's public types that carry a float a caller can read: a public field whose type
-    names f32, f64 or another such type (to a fixpoint)"""
+    names f32, f64 or another such type, and a module-level type alias of such a type (to a
+    fixpoint; an associated `type Output = ..` inside an impl or trait is not an alias)"""
     fields: dict[str, list[str]] = {}
     for path in sorted(src.rglob("*.rs")):
         lines = path.read_text(encoding="utf-8").splitlines()
         cur: str | None = None
         depth = 0
+        nest = 0  # brace depth of the file
+        assoc: list[int] = []  # depths at which an impl / trait block opened
         for line in lines:
             code = line.split("//", 1)[0]
+            a = ALIAS_RE.match(code)
+            if a and not assoc:
+                fields.setdefault(a.group("name"), []).append(a.group("ty"))
+            if re.match(r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:unsafe\s+)?(?:impl|trait)\b", code) and "{" in code:
+                assoc.append(nest)
+            nest += code.count("{") - code.count("}")
+            while assoc and nest <= assoc[-1]:
+                assoc.pop()
             m = STRUCT_RE.match(code)
             if m and cur is None:
                 cur = m.group("name")

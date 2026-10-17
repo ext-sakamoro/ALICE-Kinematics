@@ -86,6 +86,37 @@ class Scan(unittest.TestCase):
         # of a struct carrier (Wrapper -> Fit); not pub(crate), not usize, not a cfg(test) module
         self.assertEqual(sorted(found), ["Vec3k::dot", "Vec3k::neg", "Vec3k::new", "fit"])
 
+    def test_a_type_alias_of_a_float_is_an_output(self):
+        # a module-level alias (pub or not, nested aliases to a fixpoint) names a float; an
+        # associated `type Item = f32` inside an impl is not an alias of the module
+        lib = LIB + """
+pub type Angle = f32;
+type Turn = Angle;
+pub fn angle() -> Angle {
+    0.0
+}
+pub fn turn() -> Option<Turn> {
+    None
+}
+pub struct Counter;
+impl Iterator for Counter {
+    type Item = f32;
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+pub fn item() -> Item {
+    Item
+}
+pub struct Item;
+"""
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "lib.rs").write_text(lib, encoding="utf-8")
+            found = scan.boundaries(Path(d))
+        self.assertIn("angle", found)
+        self.assertIn("turn", found)
+        self.assertNotIn("item", found)
+
     def test_tested_exempt_and_debt_pass(self):
         rc, out = self.run_on(LIB, self.ALL)
         self.assertEqual(rc, 0, out)

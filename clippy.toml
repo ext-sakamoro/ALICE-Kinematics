@@ -90,6 +90,13 @@ disallowed-methods = [
     { path = "std::time::SystemTime::elapsed", reason = "reads the wall clock the same as SystemTime::now; duration_since on an already-held value is fine, this reads the clock again" },
     { path = "std::time::SystemTime::now", reason = "the wall clock makes results depend on timing; pass time in or use a step count" },
     { path = "std::collections::hash_map::RandomState::new", reason = "seeds from OS randomness and would make HashMap iteration order non-deterministic" },
+    # ALICE-Law G13: no output may combine work in an order set by threads (scripts/order_guard.py
+    # also reads rayon / crossbeam uses and normal dependencies)
+    { path = "std::thread::spawn", reason = "spawning or scoping threads makes the combination order depend on scheduling and thread count (ALICE-Law G13)" },
+    { path = "std::thread::scope", reason = "spawning or scoping threads makes the combination order depend on scheduling and thread count (ALICE-Law G13)" },
+    { path = "std::thread::Builder::spawn", reason = "spawning or scoping threads makes the combination order depend on scheduling and thread count (ALICE-Law G13)" },
+    { path = "std::thread::Builder::spawn_scoped", reason = "spawning or scoping threads makes the combination order depend on scheduling and thread count (ALICE-Law G13)" },
+    { path = "std::thread::available_parallelism", reason = "the combination order of work on several threads depends on scheduling and thread count (ALICE-Law G13)" },
 ]
 
 # ALICE-Law G13: no output may depend on hash iteration order (a BTreeMap / BTreeSet is the
@@ -97,4 +104,7 @@ disallowed-methods = [
 disallowed-types = [
     { path = "std::collections::HashMap", reason = "iteration order is randomised per process; use BTreeMap" },
     { path = "std::collections::HashSet", reason = "iteration order is randomised per process; use BTreeSet" },
+    { path = "std::thread::Builder", reason = "a thread whose results are combined makes the order depend on scheduling and thread count (ALICE-Law G13)" },
+    { path = "std::thread::JoinHandle", reason = "a thread whose results are combined makes the order depend on scheduling and thread count (ALICE-Law G13)" },
+    { path = "std::thread::ScopedJoinHandle", reason = "a thread whose results are combined makes the order depend on scheduling and thread count (ALICE-Law G13)" },
 ]
