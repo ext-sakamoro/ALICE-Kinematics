@@ -14,6 +14,7 @@
 
 use crate::intent::Intent;
 use crate::joint::Vec3k;
+use crate::nan::canon;
 
 /// Quintic polynomial coefficients for one axis
 ///
@@ -78,12 +79,14 @@ impl QuinticCoeffs {
         let t3 = t2 * t;
         let t4 = t3 * t;
         let t5 = t4 * t;
-        self.c[0]
-            + self.c[1] * t
-            + self.c[2] * t2
-            + self.c[3] * t3
-            + self.c[4] * t4
-            + self.c[5] * t5
+        canon(
+            self.c[0]
+                + self.c[1] * t
+                + self.c[2] * t2
+                + self.c[3] * t3
+                + self.c[4] * t4
+                + self.c[5] * t5,
+        )
     }
 
     /// Evaluate velocity at time t
@@ -93,11 +96,13 @@ impl QuinticCoeffs {
         let t2 = t * t;
         let t3 = t2 * t;
         let t4 = t3 * t;
-        self.c[1]
-            + 2.0 * self.c[2] * t
-            + 3.0 * self.c[3] * t2
-            + 4.0 * self.c[4] * t3
-            + 5.0 * self.c[5] * t4
+        canon(
+            self.c[1]
+                + 2.0 * self.c[2] * t
+                + 3.0 * self.c[3] * t2
+                + 4.0 * self.c[4] * t3
+                + 5.0 * self.c[5] * t4,
+        )
     }
 
     /// Evaluate acceleration at time t
@@ -106,7 +111,7 @@ impl QuinticCoeffs {
     pub fn acceleration(&self, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
-        2.0 * self.c[2] + 6.0 * self.c[3] * t + 12.0 * self.c[4] * t2 + 20.0 * self.c[5] * t3
+        canon(2.0 * self.c[2] + 6.0 * self.c[3] * t + 12.0 * self.c[4] * t2 + 20.0 * self.c[5] * t3)
     }
 }
 
@@ -263,7 +268,7 @@ impl Predictor {
     #[must_use]
     pub fn remaining(&self) -> f32 {
         if self.active {
-            self.duration - self.elapsed
+            canon(self.duration - self.elapsed)
         } else {
             0.0
         }
@@ -280,7 +285,7 @@ impl Predictor {
         if p > 1.0 {
             1.0
         } else {
-            p
+            canon(p)
         }
     }
 }

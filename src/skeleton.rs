@@ -229,7 +229,8 @@ impl Skeleton {
     /// 関節のワールド位置を取得。
     #[must_use]
     pub fn joint_world_position(&self, id: BoneId) -> Option<Vec3k> {
-        self.find_joint(id).map(|j| j.world_position)
+        self.find_joint(id)
+            .map(|j| crate::nan::canon3(j.world_position))
     }
 
     /// 関節のローカル回転を設定。
@@ -252,7 +253,7 @@ impl Skeleton {
     pub fn distance_between(&self, a: BoneId, b: BoneId) -> Option<f32> {
         let pa = self.joint_world_position(a)?;
         let pb = self.joint_world_position(b)?;
-        Some(pa.distance(pb))
+        Some(crate::nan::canon(pa.distance(pb)))
     }
 
     /// 子関節のリストを取得。

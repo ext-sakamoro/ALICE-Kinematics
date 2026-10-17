@@ -79,10 +79,10 @@ fn segment_distance_at_zero_and_nan_projection() {
     let pos = point_to_segment_distance_sq(Vec3k::new(1.0, 0.0, 0.0), a, b);
     assert_eq!(neg.to_bits(), 1.0_f32.to_bits());
     assert_eq!(pos.to_bits(), 1.0_f32.to_bits());
-    // the point's NaN reaches the result before the projection's does, so
-    // its payload is what comes out
+    // a NaN in the point: the result is the canonical NaN, whatever the
+    // point's payload (src/nan.rs)
     let nan = point_to_segment_distance_sq(Vec3k::new(payload_nan(), 0.5, 0.0), a, b);
-    assert!(nan.is_nan());
+    assert_eq!(nan.to_bits(), CANONICAL_NAN, "{:#010x}", nan.to_bits());
 }
 
 /// The cosine clamp of the arm inverse kinematics (`clamp(dot, -1, 1)`
@@ -93,7 +93,12 @@ fn arm_inverse_kinematics_with_a_nan_target() {
     let (iterations, error) = arm.inverse_kinematics(Vec3k::new(payload_nan(), 0.2, 0.1), 8, 1e-4);
     let angles: Vec<u32> = arm.angles().iter().map(|a| a.to_bits()).collect();
     assert_eq!(iterations, 8, "error {error}");
-    assert!(error.is_nan());
+    assert_eq!(
+        error.to_bits(),
+        CANONICAL_NAN,
+        "error {:#010x}",
+        error.to_bits()
+    );
     // the clamp replaces the NaN cosine by the canonical NaN, which then
     // reaches every angle; a comparison carries the target's payload
     assert_eq!(

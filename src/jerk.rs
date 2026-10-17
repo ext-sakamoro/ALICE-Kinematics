@@ -103,7 +103,7 @@ impl JerkFitter {
             return Vec3k::ZERO;
         }
         let inv_dt = 1.0 / dt;
-        (s2.pos - s1.pos).scale(inv_dt)
+        crate::nan::canon3((s2.pos - s1.pos).scale(inv_dt))
     }
 
     /// Compute current acceleration from recent samples
@@ -128,7 +128,7 @@ impl JerkFitter {
         let v2 = (s2.pos - s1.pos).scale(inv_dt2);
         // avg_dt = (dt1 + dt2) * 0.5 → inv = 2.0 / (dt1 + dt2)
         let inv_avg_dt = 2.0 / (dt1 + dt2);
-        (v2 - v1).scale(inv_avg_dt)
+        crate::nan::canon3((v2 - v1).scale(inv_avg_dt))
     }
 
     /// Detect if motion has started (velocity exceeds threshold)
@@ -294,7 +294,7 @@ pub fn minimum_jerk_cost(displacement: f32, duration: f32) -> f32 {
         return f32::MAX;
     }
     let t5 = duration * duration * duration * duration * duration;
-    720.0 * displacement * displacement / t5
+    crate::nan::canon(720.0 * displacement * displacement / t5)
 }
 
 /// Compute the speed-accuracy tradeoff (Fitts' Law)
@@ -305,11 +305,11 @@ pub fn minimum_jerk_cost(displacement: f32, duration: f32) -> f32 {
 #[must_use]
 pub fn fitts_law_duration(distance: f32, target_width: f32, a: f32, b: f32) -> f32 {
     if target_width < 1e-6 {
-        return a + b * 10.0;
+        return crate::nan::canon(a + b * 10.0);
     }
     let inv_w = 1.0 / target_width;
     let id = log2_approx(2.0 * distance * inv_w);
-    a + b * id
+    crate::nan::canon(a + b * id)
 }
 
 /// Fast log2 approximation

@@ -6,6 +6,7 @@
 //! License: MIT
 //! Author: Moroya Sakamoto
 
+use crate::nan::{canon, canon3};
 use core::ops::{Add, Mul, Neg, Sub};
 
 /// 3D vector for kinematics (12 bytes)
@@ -31,13 +32,13 @@ impl Vec3k {
     #[inline(always)]
     #[must_use]
     pub fn length_sq(self) -> f32 {
-        self.x * self.x + self.y * self.y + self.z * self.z
+        canon(self.x * self.x + self.y * self.y + self.z * self.z)
     }
 
     #[inline(always)]
     #[must_use]
     pub fn length(self) -> f32 {
-        fast_sqrt(self.length_sq())
+        canon(fast_sqrt(self.length_sq()))
     }
 
     #[inline(always)]
@@ -48,93 +49,93 @@ impl Vec3k {
             return Self::ZERO;
         }
         let inv = 1.0 / len;
-        Self {
+        canon3(Self {
             x: self.x * inv,
             y: self.y * inv,
             z: self.z * inv,
-        }
+        })
     }
 
     #[inline(always)]
     #[must_use]
     pub fn dot(self, other: Self) -> f32 {
-        self.x * other.x + self.y * other.y + self.z * other.z
+        canon(self.x * other.x + self.y * other.y + self.z * other.z)
     }
 
     #[must_use]
     pub fn cross(self, other: Self) -> Self {
-        Self {
+        canon3(Self {
             x: self.y * other.z - self.z * other.y,
             y: self.z * other.x - self.x * other.z,
             z: self.x * other.y - self.y * other.x,
-        }
+        })
     }
 
     #[must_use]
     pub fn distance(self, other: Self) -> f32 {
-        (self - other).length()
+        canon((self - other).length())
     }
 
     #[must_use]
     pub fn lerp(self, other: Self, t: f32) -> Self {
-        Self {
+        canon3(Self {
             x: self.x + (other.x - self.x) * t,
             y: self.y + (other.y - self.y) * t,
             z: self.z + (other.z - self.z) * t,
-        }
+        })
     }
 
     #[must_use]
     pub fn scale(self, s: f32) -> Self {
-        Self {
+        canon3(Self {
             x: self.x * s,
             y: self.y * s,
             z: self.z * s,
-        }
+        })
     }
 }
 
 impl Add for Vec3k {
     type Output = Self;
     fn add(self, rhs: Self) -> Self {
-        Self {
+        canon3(Self {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
             z: self.z + rhs.z,
-        }
+        })
     }
 }
 
 impl Sub for Vec3k {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self {
-        Self {
+        canon3(Self {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
             z: self.z - rhs.z,
-        }
+        })
     }
 }
 
 impl Mul<f32> for Vec3k {
     type Output = Self;
     fn mul(self, rhs: f32) -> Self {
-        Self {
+        canon3(Self {
             x: self.x * rhs,
             y: self.y * rhs,
             z: self.z * rhs,
-        }
+        })
     }
 }
 
 impl Neg for Vec3k {
     type Output = Self;
     fn neg(self) -> Self {
-        Self {
+        canon3(Self {
             x: -self.x,
             y: -self.y,
             z: -self.z,
-        }
+        })
     }
 }
 
@@ -185,13 +186,13 @@ impl JointConstraint {
         } else if angle > self.max_rad {
             self.max_rad
         } else {
-            angle
+            canon(angle)
         }
     }
 
     #[must_use]
     pub fn range(&self) -> f32 {
-        self.max_rad - self.min_rad
+        canon(self.max_rad - self.min_rad)
     }
 }
 
@@ -226,7 +227,7 @@ impl Joint {
     }
 
     pub fn set_angle(&mut self, angle: f32) {
-        self.angle = self.constraint.clamp(angle);
+        self.angle = canon(self.constraint.clamp(angle));
     }
 }
 
@@ -365,7 +366,7 @@ impl ArmChain {
             // Advance position along link
             pos = pos + dir.scale(j.link_length);
         }
-        pos
+        canon3(pos)
     }
 
     /// CCD (Cyclic Coordinate Descent) Inverse Kinematics
@@ -465,7 +466,7 @@ impl ArmChain {
             }
         }
 
-        let error = self.forward_kinematics().distance(target);
+        let error = canon(self.forward_kinematics().distance(target));
         (max_iter, error)
     }
 
@@ -482,7 +483,7 @@ impl ArmChain {
             dir = rotate_vec(dir, j.axis, j.angle);
             pos = pos + dir.scale(j.link_length);
         }
-        pos
+        canon3(pos)
     }
 
     /// Total arm length (sum of all link lengths)
@@ -492,7 +493,7 @@ impl ArmChain {
         for j in &self.joints {
             len += j.link_length;
         }
-        len
+        canon(len)
     }
 
     /// Get all joint angles as array
@@ -500,7 +501,7 @@ impl ArmChain {
     pub fn angles(&self) -> [f32; MAX_JOINTS] {
         let mut a = [0.0f32; MAX_JOINTS];
         for (i, j) in self.joints.iter().enumerate() {
-            a[i] = j.angle;
+            a[i] = canon(j.angle);
         }
         a
     }
@@ -521,7 +522,7 @@ pub fn rotate_vec(v: Vec3k, axis: Vec3k, theta: f32) -> Vec3k {
     let term1 = v.scale(cos_t);
     let term2 = k.cross(v).scale(sin_t);
     let term3 = k.scale(k.dot(v) * (1.0 - cos_t));
-    term1 + term2 + term3
+    canon3(term1 + term2 + term3)
 }
 
 /// Approximate sin and cos (Bhaskara I + identity)

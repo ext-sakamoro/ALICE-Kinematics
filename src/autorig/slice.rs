@@ -48,11 +48,11 @@ impl NormalizedMesh {
     /// 正規化 → 元スケール座標への変換 (Y=0 が bbox_min.y)
     #[must_use]
     pub fn denormalize(&self, normalized: Vec3k) -> Vec3k {
-        Vec3k::new(
+        crate::nan::canon3(Vec3k::new(
             normalized.x * self.original_height + self.original_min.x,
             normalized.y * self.original_height + self.original_min.y,
             normalized.z * self.original_height + self.original_min.z,
-        )
+        ))
     }
 
     /// 水平方向 (X, Z) の最大 extent (= 幅と奥行のうち大きい方)
@@ -66,11 +66,7 @@ impl NormalizedMesh {
         }
         let width_x = (self.original_max.x - self.original_min.x) / scale;
         let width_z = (self.original_max.z - self.original_min.z) / scale;
-        if width_x > width_z {
-            width_x
-        } else {
-            width_z
-        }
+        crate::nan::canon(if width_x > width_z { width_x } else { width_z })
     }
 }
 

@@ -174,7 +174,7 @@ impl Intent {
     #[must_use]
     pub fn duration_secs(&self) -> f32 {
         const INV_1000: f32 = 1.0 / 1000.0;
-        self.duration_ms as f32 * INV_1000
+        crate::nan::canon(self.duration_ms as f32 * INV_1000)
     }
 }
 

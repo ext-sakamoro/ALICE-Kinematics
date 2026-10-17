@@ -145,13 +145,13 @@ impl Finger {
             dir = crate::joint::rotate_vec(dir, j.axis, j.angle);
             pos = pos + dir.scale(j.link_length);
         }
-        pos
+        crate::nan::canon3(pos)
     }
 
     /// 全関節角度を取得。
     #[must_use]
     pub fn angles(&self) -> [f32; 4] {
-        core::array::from_fn(|i| self.joints[i].angle)
+        core::array::from_fn(|i| crate::nan::canon(self.joints[i].angle))
     }
 
     /// 全関節角度を設定。
@@ -164,7 +164,7 @@ impl Finger {
     /// 指の総リンク長。
     #[must_use]
     pub fn total_length(&self) -> f32 {
-        self.joints.iter().map(|j| j.link_length).sum()
+        crate::nan::canon(self.joints.iter().map(|j| j.link_length).sum())
     }
 
     /// PIP/DIP カップリング: DIP角度を PIP角度の 2/3 に連動。

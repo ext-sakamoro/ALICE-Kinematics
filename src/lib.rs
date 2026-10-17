@@ -47,6 +47,7 @@ pub mod autorig;
 pub mod hand;
 pub mod intent;
 pub mod joint;
+mod nan;
 pub mod predictor;
 pub mod prelude;
 pub mod semantics;
