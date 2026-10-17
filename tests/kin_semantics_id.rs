@@ -93,6 +93,14 @@ fn check_entries(pins: &[(&str, [u8; 32])], minimum: usize) {
 #[test]
 fn every_semantics_entry_is_the_golden_its_scenario_records() {
     check_entries(KIN_SEMANTICS_PINS, 5);
+    // and the other way: every recorded golden is folded into the semantics
+    // identifier (the wire table is the packet subset by design)
+    for name in recorded_goldens().keys() {
+        assert!(
+            KIN_SEMANTICS_PINS.iter().any(|(n, _)| n == name),
+            "the golden {name:?} of tests/semantics_golden.rs is not folded"
+        );
+    }
 }
 
 #[test]
@@ -194,4 +202,16 @@ fn the_pins_were_checked_on_this_version_and_toolchain() {
         .expect("a channel line")
         .trim_matches('"');
     assert_eq!(KIN_SEMANTICS_CHECKED_AT.1, channel, "toolchain channel");
+    // the rustc that runs the test, so an override of the file is caught too
+    let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
+    let out = std::process::Command::new(rustc)
+        .arg("-V")
+        .output()
+        .expect("rustc -V");
+    let version = String::from_utf8(out.stdout).expect("utf-8");
+    assert!(
+        version.starts_with(&format!("rustc {} ", KIN_SEMANTICS_CHECKED_AT.1)),
+        "running {version:?}, pins checked on {}",
+        KIN_SEMANTICS_CHECKED_AT.1
+    );
 }
