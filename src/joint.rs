@@ -433,7 +433,7 @@ impl ArmChain {
                 let to_target = raw_to_target.scale(inv_len_target);
 
                 // Angle between the two unit vectors
-                let dot = to_end.dot(to_target).clamp(-1.0_f32, 1.0_f32);
+                let dot = alice_det_math::metric::clamp(to_end.dot(to_target), -1.0, 1.0);
                 let raw_angle = acos_approx(dot);
 
                 // Half-step CCD.  The former multiplicative "DLS" factor

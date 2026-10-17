@@ -105,11 +105,9 @@ fn quintic_boundary_conditions_hold_for_any_start_state() {
     ] {
         let q = QuinticCoeffs::from_boundary(x0, v0, a0, xf, t);
         let scale = f64::from(
-            (xf - x0)
-                .abs()
-                .max(v0.abs() * t)
-                .max(a0.abs() * t * t)
-                .max(1.0),
+            [v0.abs() * t, a0.abs() * t * t, 1.0]
+                .into_iter()
+                .fold((xf - x0).abs(), alice_det_math::max),
         );
         // oracle: the six boundary conditions that define the quintic
         assert!((q.position(0.0) - x0).abs() < 1e-6 * scale as f32, "x(0)");

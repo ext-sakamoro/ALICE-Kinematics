@@ -304,8 +304,11 @@ mod tests {
         assert!((nm.original_height - 1.0).abs() < 1e-6);
         // Y 座標は [0.0, 1.0]
         let ys: Vec<f32> = nm.vertices.iter().map(|v| v.y).collect();
-        let min_y = ys.iter().copied().fold(f32::INFINITY, f32::min);
-        let max_y = ys.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        let min_y = ys.iter().copied().fold(f32::INFINITY, alice_det_math::min);
+        let max_y = ys
+            .iter()
+            .copied()
+            .fold(f32::NEG_INFINITY, alice_det_math::max);
         assert!(min_y.abs() < 1e-6);
         assert!((max_y - 1.0).abs() < 1e-6);
     }
@@ -322,7 +325,7 @@ mod tests {
             .vertices
             .iter()
             .map(|v| v.y)
-            .fold(f32::NEG_INFINITY, f32::max);
+            .fold(f32::NEG_INFINITY, alice_det_math::max);
         assert!((max_y - 1.0).abs() < 1e-6);
     }
 

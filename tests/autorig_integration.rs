@@ -442,8 +442,11 @@ fn stick_figure_height_matches_mesh() {
     let skel = result.skeleton.unwrap();
     // stick figure の Y 範囲は 0.0-0.98 (頭上頂点)
     let ys: Vec<f32> = v.iter().map(|p| p.y).collect();
-    let min_y = ys.iter().copied().fold(f32::INFINITY, f32::min);
-    let max_y = ys.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    let min_y = ys.iter().copied().fold(f32::INFINITY, alice_det_math::min);
+    let max_y = ys
+        .iter()
+        .copied()
+        .fold(f32::NEG_INFINITY, alice_det_math::max);
     let expected_height = max_y - min_y;
     assert!(
         (skel.height - expected_height).abs() < 0.05,

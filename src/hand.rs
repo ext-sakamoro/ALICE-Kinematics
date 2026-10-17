@@ -235,7 +235,7 @@ impl HandModel {
 
     /// グリップ (全指の MCP + PIP を閉じる)。
     pub fn grip(&mut self, amount: f32) {
-        let amount = amount.clamp(0.0, 1.0);
+        let amount = alice_det_math::metric::clamp(amount, 0.0, 1.0);
         for finger in &mut self.fingers {
             let max_mcp = finger.joints[0].constraint.max_rad;
             let max_pip = finger.joints[1].constraint.max_rad;

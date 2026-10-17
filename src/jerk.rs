@@ -183,7 +183,7 @@ impl JerkFitter {
                     reason = "f32::midpoint is target-dependent (f64 on x86_64 / aarch64 / wasm, f32 elsewhere) and its bits differ by target at subnormal results; banned in clippy.toml"
                 )]
                 let x = 0.5 * (lo + hi);
-                let r = s_profile(t_mid * x) / s_profile(duration * x).max(1e-12);
+                let r = s_profile(t_mid * x) / alice_det_math::max(s_profile(duration * x), 1e-12);
                 if r < ratio {
                     lo = x;
                 } else {
@@ -203,7 +203,13 @@ impl JerkFitter {
         } else {
             duration * 2.0
         };
-        let progress = s_profile((duration / estimated_total_duration).min(1.0)).max(1e-6);
+        let progress = alice_det_math::max(
+            s_profile(alice_det_math::min(
+                duration / estimated_total_duration,
+                1.0,
+            )),
+            1e-6,
+        );
         let target = first.pos + displacement.normalize().scale(dist / progress);
 
         // Fit quintic per-axis and compute residual error
@@ -277,7 +283,7 @@ fn fast_sqrt_jerk(x: f32) -> f32 {
 /// Normalised minimum-jerk position profile s(τ) = 10τ³ − 15τ⁴ + 6τ⁵ on [0, 1]
 #[inline]
 fn s_profile(tau: f32) -> f32 {
-    let tau = tau.clamp(0.0, 1.0);
+    let tau = alice_det_math::metric::clamp(tau, 0.0, 1.0);
     let t3 = tau * tau * tau;
     t3 * (10.0 - 15.0 * tau + 6.0 * tau * tau)
 }

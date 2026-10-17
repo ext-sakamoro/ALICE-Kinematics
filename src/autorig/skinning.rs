@@ -85,7 +85,7 @@ pub fn point_to_segment_distance_sq(p: Vec3k, a: Vec3k, b: Vec3k) -> f32 {
         // 縮退線分 (a == b) は点との距離
         return ap.length_sq();
     }
-    let t = (ab.dot(ap) / denom).clamp(0.0, 1.0);
+    let t = alice_det_math::metric::clamp(ab.dot(ap) / denom, 0.0, 1.0);
     let closest = a + ab.scale(t);
     (p - closest).length_sq()
 }

@@ -29,9 +29,17 @@ note = "src/ calls no banned method in any feature set. The banned names that re
 reference_repo = "ALICE-DB"
 
 [G2]
-status = "fail-known"
-note = "no Law helper for max/min and no default-deny manifest of raw_* exceptions exist, and no clippy ban on f32::max / f32::min. The library calls f32 max/min directly at src/jerk.rs:182 (`.max(1e-12)`) and :198 (`.min(1.0)` then `.max(1e-6)`; both in the encoder-gated jerk module), and f32::clamp (whose NaN and signed-zero handling is also platform-visible, not named by the gate) at src/jerk.rs:272, src/hand.rs:238, src/joint.rs:436, src/autorig/skinning.rs:88, src/lol_bridge.rs:276 and :286; the other min calls in src (src/autorig/hypothesis.rs:319-323, src/autorig/slice.rs:179, src/joint.rs:217) are usize. A probe function calling x.max(0.5) and x.min(2.0) added under the std feature passed the CI clippy command (rc 0, measured 2026-10-15, reverted). The crate builds no SIMD path (grep for target_feature, core::arch, std::arch, simd over src and Cargo.toml: 0), so the per-width test list is empty."
-reference_repo = "ALICE-Analytics"
+status = "pass"
+evidence = [
+    "Cargo.toml [dependencies] alice-det-math 0.5.1 (default features off, no_std): the Law helpers alice_det_math::max / min (f32), max64 / min64 (f64) and alice_det_math::metric::clamp",
+    "library sites routed through them: src/jerk.rs lines 186, 206 and 207 (max / min) and 283 (clamp), src/hand.rs line 238, src/joint.rs line 436, src/autorig/skinning.rs line 88, src/lol_bridge.rs lines 276 and 286 (clamp); test code uses the same helpers (src/autorig/slice.rs lines 307, 308 and 325, tests/analytic_oracle.rs, tests/autorig_integration.rs)",
+    "clippy.toml lines 80 to 85 (disallowed-methods f32::max, f32::min, f32::clamp, f64::max, f64::min, f64::clamp, for every target including tests)",
+    ".github/workflows/ci.yml clippy steps (encoder line 143, std line 149, all features line 154, RUSTFLAGS=-Dwarnings) and the clippy canary (lines 174 to 185: scripts/clippy_canary_calls.tsv is generated from clippy.toml, 59 planted calls including the six above, each must be flagged)",
+]
+mutant = "measured 2026-10-17, each reverted: restoring `s_profile(duration * x).max(1e-12)` at src/jerk.rs line 186 fails the clippy (encoder) step with `use of a disallowed method f32::max` (the jerk module is encoder-gated, so the std step does not build it); restoring `(sec * 1000.0).clamp(20.0, 255.0)` at src/lol_bridge.rs line 276 fails the clippy (all features) step with `use of a disallowed method f32::clamp`"
+since = ""
+note = "raw f32 / f64 max, min and clamp are a default-deny in clippy.toml, with no exception and so no raw_* manifest. The helpers come from alice-det-math, the owner of these Laws, rather than a local copy: max / min give an equal pair of zeros a defined sign (+0 from max, -0 from min, where std documents that either may be returned) and a NaN operand the other operand; clamp gives the canonical NaN for a NaN argument and lets the low bound win for inverted bounds (std passes a NaN through with its payload and panics on inverted bounds). On the inputs the sites see (finite values, constant bounds) the results are the bits std gave; the tests that pin the packet encodings pass unchanged. The default build is no_std; the helpers are core-only, so every build uses them. The crate builds no SIMD path (grep for target_feature, core::arch, std::arch and simd over src and Cargo.toml: 0), so the per-width test list is empty. f32::clamp and the f64 forms are not named by the gate; they are banned for the same reason."
+reference_repo = "ALICE-Physics"
 
 [G3]
 status = "pass"

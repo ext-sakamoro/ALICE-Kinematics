@@ -273,7 +273,7 @@ fn duration_from_speed(distance: f32, speed: f32) -> u8 {
         return 200;
     }
     let sec = distance / speed;
-    let ms = (sec * 1000.0).clamp(20.0, 255.0);
+    let ms = alice_det_math::metric::clamp(sec * 1000.0, 20.0, 255.0);
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     (ms as u8)
 }
@@ -283,7 +283,7 @@ fn duration_from_force(force: f32) -> u8 {
     if force <= 0.0 {
         return 200;
     }
-    let ms = (200.0 / (1.0 + force * 0.1)).clamp(20.0, 255.0);
+    let ms = alice_det_math::metric::clamp(200.0 / (1.0 + force * 0.1), 20.0, 255.0);
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     (ms as u8)
 }
