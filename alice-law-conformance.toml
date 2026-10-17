@@ -70,7 +70,7 @@ reference_repo = "ALICE-LOL"
 status = "fail-known"
 evidence = [
     "tests/float_edge_golden.rs (4 tests): +0 and -0 coordinates encode to the same Intent packet and decode to +0 bits; a rest-to-rest quintic from 0 to 1 over T = 1 ends exactly at position 1.0 with velocity and acceleration +0 (c3 = 10, c4 = -15, c5 = 6: 30 - 60 + 30 and 60 - 180 + 120 cancel exactly); zero displacement and the zero-duration branch hold their value with +0 velocity and acceleration (a -0 start velocity included), all against fixed bit patterns; a NaN start gives the canonical NaN 0x7fc0_0000 in position, velocity and acceleration at every time",
-    ".github/workflows/ci.yml test job (line 21, matrix ubuntu-latest and macos-latest: x86_64 and aarch64) and release job (line 69, same matrix, --release): scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=5,stream_hello=14,float_environment=2,nan_boundaries=39 (lines 51 and 98) fails a leg whose binary ran fewer tests",
+    ".github/workflows/ci.yml test job (line 21, matrix ubuntu-latest and macos-latest: x86_64 and aarch64) and release job (line 69, same matrix, --release): scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=39 (lines 51 and 98) fails a leg whose binary ran fewer tests",
 ]
 mutant = "measured 2026-10-17, each reverted: a decode that returns -0 for a zero coordinate (src/intent.rs q8_to_f32) fails signed_zero_coordinates_encode_and_decode_to_the_recorded_bits; c3's 20.0 changed to 20.000002 (src/predictor.rs from_boundary) fails a_rest_to_rest_end_cancels_exactly; removing the canonicalisation at one output (QuinticCoeffs::position returning its sum raw) fails a_nan_start_gives_the_canonical_nan, boundary_quinticcoeffs_position and boundary_predictor_position_at on all four legs (debug and release, aarch64 natively and x86_64 under Rosetta)"
 since = ""
@@ -80,7 +80,7 @@ reference_repo = "ALICE-DB"
 [G5]
 status = "pass"
 evidence = [
-    ".github/workflows/ci.yml release job (line 69): on ubuntu-latest (x86_64) and macos-latest (aarch64), cargo test --release --lib --tests with the default features (the Law tests counted by scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=3,law_max_min_ties=5,stream_hello=14,float_environment=2,nan_boundaries=39, line 98), with encoder (nan_boundaries=43, line 101) and with lol",
+    ".github/workflows/ci.yml release job (line 69): on ubuntu-latest (x86_64) and macos-latest (aarch64), cargo test --release --lib --tests with the default features (the Law tests counted by scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=3,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=39, line 98), with encoder (law_max_min_ties=5,nan_boundaries=43: the jerk tie test is encoder-only; line 101) and with lol",
     "scripts/preflight.sh runs the same release steps in its full part",
 ]
 mutant = "measured 2026-10-17: the release leg found a real divergence when it was added: tests/law_max_min_ties.rs::arm_inverse_kinematics_with_a_nan_target passed in debug (angles 0x7fc0_0000) and failed under --release (0xffc0_0000); with the fix (src/nan.rs), making canon the identity again fails it in release only (debug stays green), so this leg is what holds it"
