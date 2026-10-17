@@ -29,6 +29,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 - CI: clippy の禁止一覧の canary (`scripts/clippy_canary.py`) を追加した 植える呼び出しの表 `scripts/clippy_canary_calls.tsv` は `scripts/gen_clippy_canary_calls.py` が `clippy.toml` から 1 entry 1 行で生成し、CI が再生成して byte で比べる この repo は 1 件 (`disallowed-methods` の `f32::midpoint`、植える) `scripts/clippy_canary.py` / `scripts/test_clippy_canary.py` / `scripts/gen_clippy_canary_calls.py` / `scripts/test_gen_clippy_canary_calls.py` は ALICE-DB と同じ中身
 
 ### Fixed
+- `distance_based_skinning` が NaN の座標を持つ頂点で、距離 NaN を候補として残し `partial_cmp(..).unwrap_or(Equal)` (全順序でない) で並べていたため、残る 4 本の骨が sort の実装に依存していた NaN の距離は範囲外として除き (Hips 100% の孤立頂点の扱い)、並べ替えは `total_cmp` にした 試験 `a_nan_vertex_has_no_candidate_bone`
 - `ArmChain::inverse_kinematics` に NaN の目標を与えた時の角度が release build では `0xffc0_0000` (debug は `0x7fc0_0000`) になっていた (`src/joint.rs` の `sign * angle` を最適化が select と符号反転に書き換え、NaN の符号 bit が立つ) NaN の符号と payload は未規定なので、crate から出る値と joint が保存する角度で NaN を正準の `0x7fc0_0000` に置き換える (`src/nan.rs`、`alice_det_math::metric::clamp` を無限の上下で使う: -0 と ±inf はそのまま) 新しい release job が debug と release の両方で固定する
 
 - `.github/workflows/g3-ir.yml` の on.push から paths filter を外した 既存の SHA に作った branch では GitHub の filter が空の差分を見て run を skip していた 代わりに `scripts/changed_paths.py` (ALICE-DetMath と同一) と `.github/paths/g3-ir.txt` で merge-base(origin/main) から実行可否を決める changes job と、走るべき IR job が走らなかった時に red になる gate job を足した `scripts/test_changed_paths.py` を CI と preflight で実行する
