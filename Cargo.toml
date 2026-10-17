@@ -1,6 +1,6 @@
 [package]
 name = "alice-kinematics"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
 description = "Human motion intent compression — 1000Hz raw coordinates → 8-byte kinematic intent"
@@ -41,6 +41,9 @@ alice-det-math = { version = "0.5.1", default-features = false }
 alice-lol = { path = "../ALICE-LOL/alice-lol", version = ">=0.4.1, <0.6", optional = true, default-features = false }
 
 [dev-dependencies]
+# SHA-256 of the recorded-bit scenarios (tests/semantics_golden.rs) and of the
+# semantics identifier fold (tests/kin_semantics_id.rs)
+sha2 = "0.10"
 
 [profile.release]
 opt-level = 3

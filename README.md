@@ -125,6 +125,23 @@ Given boundary conditions (start position, velocity, acceleration; end position,
 - **duration**: Movement duration in milliseconds (0-255ms)
 - **flags**: Joint mask, grip state, intent type
 
+### Stream Hello (80 bytes, since 0.3.0)
+
+A live stream or a recorded file starts with one hello frame, followed by packets of one kind:
+
+```
+magic "AKINHELO" (8) | format u16 (2) | packet kind 8 or 16 (1) | reserved (1)
+| KIN_SEMANTICS_ID (32) | KIN_WIRE_SEMANTICS_ID (32) | CRC-32 (4)
+```
+
+`stream::open_stream` checks both identifiers against the running build and returns the packet bytes:
+
+- `WireMismatch`: the bytes use another packet format, so decoding would misread them
+- `SemanticsMismatch`: same format, but the producer computed the intents with other arithmetic
+- no hello: `Unpinned` (streams from before 0.3.0), or refused under `HelloPolicy::RequirePinned`
+
+Readers before 0.3.0 cannot detect a hello (every 8-byte string decodes to some intent), so send a hello-led stream only to 0.3.0 or later readers.
+
 ## Memory Footprint
 
 | Component | Size |

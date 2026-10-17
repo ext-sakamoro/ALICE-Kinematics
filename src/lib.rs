@@ -49,7 +49,9 @@ pub mod intent;
 pub mod joint;
 pub mod predictor;
 pub mod prelude;
+pub mod semantics;
 pub mod skeleton;
+pub mod stream;
 
 #[cfg(feature = "encoder")]
 pub mod encoder;
@@ -63,6 +65,7 @@ pub mod lol_bridge;
 pub use intent::{Intent, IntentFlags, IntentType};
 pub use joint::{ArmChain, Joint, JointConstraint, Vec3k};
 pub use predictor::Predictor;
+pub use semantics::{KIN_SEMANTICS_ID, KIN_WIRE_SEMANTICS_ID};
 
 /// Lint probe for the clippy steps of CI (`scripts/clippy_lint_probe.py`)
 ///
