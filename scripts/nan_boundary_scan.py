@@ -39,6 +39,13 @@ EXEMPT = {
     "Intent::decode": "decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
     "ExtendedIntent::decode": "decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
     "intents": "an iterator of Intent::decode over the packets: decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
+    "Skeleton::default_humanoid": "Skeleton::with_height(1.70): no input reaches it, and with_height's "
+                                  "output is canonical",
+    "distance_based_skinning": "every weight is 0, 1 or 1 / (d² + 1e-6) over the sum of such terms: "
+                               "a NaN distance fails `< f32::MAX` and weighs 0, so no NaN can leave it",
+    "Skeleton::find_joint": "returns a reference to a joint as stored; every crate computation that "
+                            "stores into a joint canonicalises (with_height, rescale, hypothesis_to_skeleton, "
+                            "auto_rig_on_sphere), the rest is the caller's own write through the pub fields",
     "extended_intents": "an iterator of ExtendedIntent::decode over the packets: decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
 }
 
@@ -47,10 +54,6 @@ EXEMPT = {
 #: in the branch that canonicalises its float fields and adds its `boundary_` test; the scan
 #: fails when an entry is no longer an output, or when a new struct-carrier output is not listed
 DEBT = [
-    # skeleton and auto-rig
-    "Skeleton::with_height", "Skeleton::default_humanoid", "Skeleton::find_joint",
-    "build_hypothesis", "hypothesis_to_skeleton", "auto_rig", "auto_rig_on_sphere",
-    "distance_based_skinning", "normalize_mesh", "slice_normalized", "TangentFrame::from_context",
     # constructors, accessors returning stored values, defaults
     "Intent::reach", "Intent::grasp", "ExtendedIntent::new", "JointConstraint::new",
     "JointConstraint::free", "Joint::new", "ArmChain::right_arm", "Finger::new",

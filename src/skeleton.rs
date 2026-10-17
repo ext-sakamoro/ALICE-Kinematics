@@ -81,6 +81,21 @@ pub struct SkeletonJoint {
     pub bone_length: f32,
 }
 
+impl SkeletonJoint {
+    /// This joint with every NaN replaced by the canonical NaN (ALICE-Law G4, `src/nan.rs`)
+    #[must_use]
+    pub(crate) fn canonical(self) -> Self {
+        use crate::nan::{canon, canon3};
+        Self {
+            local_position: canon3(self.local_position),
+            local_rotation: canon3(self.local_rotation),
+            world_position: canon3(self.world_position),
+            bone_length: canon(self.bone_length),
+            ..self
+        }
+    }
+}
+
 /// 全身骨格モデル。
 #[derive(Debug, Clone)]
 pub struct Skeleton {
@@ -88,6 +103,21 @@ pub struct Skeleton {
     pub joints: Vec<SkeletonJoint>,
     /// 身長 (メートル)。
     pub height: f32,
+}
+
+impl Skeleton {
+    /// This skeleton with every NaN replaced by the canonical NaN (ALICE-Law G4, `src/nan.rs`)
+    #[must_use]
+    pub(crate) fn canonical(self) -> Self {
+        Self {
+            joints: self
+                .joints
+                .into_iter()
+                .map(SkeletonJoint::canonical)
+                .collect(),
+            height: crate::nan::canon(self.height),
+        }
+    }
 }
 
 /// デフォルトの親子関係テーブル。
@@ -198,7 +228,7 @@ impl Skeleton {
 
         let mut skel = Self { joints, height };
         skel.update_world_positions();
-        skel
+        skel.canonical()
     }
 
     /// FK: ローカル位置からワールド位置を計算。
@@ -276,6 +306,13 @@ impl Skeleton {
         }
         self.height = new_height;
         self.update_world_positions();
+        // what it stores is read back through find_joint / the pub fields (ALICE-Law G4)
+        let joints = core::mem::take(&mut self.joints);
+        *self = Self {
+            joints,
+            height: self.height,
+        }
+        .canonical();
     }
 }
 

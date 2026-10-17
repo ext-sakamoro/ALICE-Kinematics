@@ -33,6 +33,17 @@ pub struct SkeletonHypothesis {
     pub confidence: f32,
 }
 
+impl SkeletonHypothesis {
+    /// This hypothesis with every NaN replaced by the canonical NaN (ALICE-Law G4, `src/nan.rs`)
+    #[must_use]
+    fn canonical(self) -> Self {
+        Self {
+            positions: self.positions.map(|p| p.map(crate::nan::canon3)),
+            confidence: crate::nan::canon(self.confidence),
+        }
+    }
+}
+
 impl Default for SkeletonHypothesis {
     fn default() -> Self {
         Self {
@@ -346,7 +357,7 @@ pub fn build_hypothesis(nm: &NormalizedMesh, slices: &[SliceStat]) -> Option<Ske
         hypothesis.confidence = detected as f32 / BONE_COUNT as f32;
     }
 
-    Some(hypothesis)
+    Some(hypothesis.canonical())
 }
 
 /// hypothesis から Skeleton を構築

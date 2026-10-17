@@ -45,6 +45,20 @@ pub struct NormalizedMesh {
 }
 
 impl NormalizedMesh {
+    /// This mesh with every NaN replaced by the canonical NaN (ALICE-Law G4, `src/nan.rs`)
+    #[must_use]
+    fn canonical(self) -> Self {
+        use crate::nan::{canon, canon3};
+        Self {
+            vertices: self.vertices.into_iter().map(canon3).collect(),
+            original_height: canon(self.original_height),
+            original_min: canon3(self.original_min),
+            original_max: canon3(self.original_max),
+        }
+    }
+}
+
+impl NormalizedMesh {
     /// 正規化 → 元スケール座標への変換 (Y=0 が bbox_min.y)
     #[must_use]
     pub fn denormalize(&self, normalized: Vec3k) -> Vec3k {
@@ -141,12 +155,15 @@ pub fn normalize_mesh(mesh: &MeshView) -> Option<NormalizedMesh> {
         })
         .collect();
 
-    Some(NormalizedMesh {
-        vertices,
-        original_height: height,
-        original_min: min,
-        original_max: max,
-    })
+    Some(
+        NormalizedMesh {
+            vertices,
+            original_height: height,
+            original_min: min,
+            original_max: max,
+        }
+        .canonical(),
+    )
 }
 
 /// 正規化済みメッシュを Y 軸方向に slice_count 個に分割し、各断面統計を返す

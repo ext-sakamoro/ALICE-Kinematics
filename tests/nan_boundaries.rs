@@ -8,12 +8,18 @@
 //! asserts that a NaN does come out (so the test is not vacuous), and that every NaN that
 //! comes out has the canonical bits. The release build once turned a NaN's sign bit on
 //! inside the arm IK (`src/joint.rs`), so these run under debug and release on `x86_64` and
-//! `aarch64` (`scripts/run_tests.sh nan_boundaries=40` in each leg; 49 with `encoder`, 41 with
+//! `aarch64` (`scripts/run_tests.sh nan_boundaries=49` in each leg; 58 with `encoder`, 50 with
 //! `lol`).
 
+use alice_kinematics::autorig::hypothesis::{
+    build_hypothesis, hypothesis_to_skeleton, SkeletonHypothesis,
+};
 use alice_kinematics::autorig::skinning::point_to_segment_distance_sq;
-use alice_kinematics::autorig::slice::NormalizedMesh;
-use alice_kinematics::autorig::sphere::TangentFrame;
+use alice_kinematics::autorig::slice::{
+    normalize_mesh, slice_normalized, NormalizedMesh, SliceStat,
+};
+use alice_kinematics::autorig::sphere::{auto_rig_on_sphere, SphereContext, TangentFrame};
+use alice_kinematics::autorig::{auto_rig, AutoRigConfig, MeshView};
 use alice_kinematics::hand::{Finger, FingerType, HandModel};
 use alice_kinematics::joint::rotate_vec;
 use alice_kinematics::predictor::QuinticCoeffs;
@@ -392,6 +398,196 @@ fn boundary_quinticcoeffs_from_boundary() {
     assert_canonical("from_boundary", &moving.c);
     let instant = QuinticCoeffs::from_boundary(0.0, 0.0, 0.0, odd_nan(), 0.0);
     assert_canonical("from_boundary (zero duration)", &instant.c);
+}
+
+// ---- skeleton and auto-rig ------------------------------------------------------------------
+
+/// a standing cylinder (radius 0.15, height 1.5, 30 rings of 12) that `auto_rig` rigs, one vertex
+/// of its middle ring moved to x = NaN
+fn cylinder_with_nan() -> Vec<Vec3k> {
+    let mut v = Vec::new();
+    for k in 0..30_u8 {
+        let y = f32::from(k) / 30.0 * 1.5;
+        for a in 0..12_u8 {
+            // a regular 12-gon from its exact corner table (no trigonometry)
+            const C: [(f32, f32); 12] = [
+                (1.0, 0.0),
+                (0.866_025_4, 0.5),
+                (0.5, 0.866_025_4),
+                (0.0, 1.0),
+                (-0.5, 0.866_025_4),
+                (-0.866_025_4, 0.5),
+                (-1.0, 0.0),
+                (-0.866_025_4, -0.5),
+                (-0.5, -0.866_025_4),
+                (0.0, -1.0),
+                (0.5, -0.866_025_4),
+                (0.866_025_4, -0.5),
+            ];
+            let (c, s) = C[usize::from(a)];
+            v.push(Vec3k::new(c * 0.15, y, s * 0.15));
+        }
+    }
+    v[15 * 12].x = odd_nan();
+    v
+}
+
+fn skeleton_values(s: &Skeleton) -> Vec<f32> {
+    let mut out = vec![s.height];
+    for j in &s.joints {
+        for p in [j.local_position, j.local_rotation, j.world_position] {
+            out.extend(v3(p));
+        }
+        out.push(j.bone_length);
+    }
+    out
+}
+
+fn mesh_values(nm: &NormalizedMesh) -> Vec<f32> {
+    let mut out = vec![nm.original_height];
+    out.extend(v3(nm.original_min));
+    out.extend(v3(nm.original_max));
+    for &p in &nm.vertices {
+        out.extend(v3(p));
+    }
+    out
+}
+
+fn slice_values(slices: &[SliceStat]) -> Vec<f32> {
+    let mut out = Vec::new();
+    for s in slices {
+        out.extend([s.y, s.width]);
+        out.extend(v3(s.centroid));
+        for c in [s.left_centroid, s.right_centroid].into_iter().flatten() {
+            out.extend(v3(c));
+        }
+    }
+    out
+}
+
+fn hypothesis_values(h: &SkeletonHypothesis) -> Vec<f32> {
+    let mut out = vec![h.confidence];
+    for p in h.positions.iter().flatten() {
+        out.extend(v3(*p));
+    }
+    out
+}
+
+/// the cylinder normalised, with the NaN vertex as given (the payload not yet canonical)
+fn raw_normalized() -> NormalizedMesh {
+    let v = cylinder_with_nan();
+    let nm = normalize_mesh(&MeshView::from_vertices(&v)).expect("a cylinder has height");
+    let mut vertices = nm.vertices;
+    vertices[15 * 12].x = odd_nan();
+    NormalizedMesh { vertices, ..nm }
+}
+
+#[test]
+fn boundary_skeleton_with_height() {
+    assert_canonical(
+        "with_height",
+        &skeleton_values(&Skeleton::with_height(odd_nan())),
+    );
+}
+
+/// `rescale` stores what it computes; `find_joint` (exempt: a reference to the stored joint) then
+/// reads it back canonical
+#[test]
+fn a_rescaled_skeleton_stores_the_canonical_nan() {
+    let mut s = Skeleton::default_humanoid();
+    s.rescale(odd_nan());
+    let j = s.find_joint(BoneId::Spine).expect("the spine");
+    let mut out = vec![s.height, j.bone_length];
+    for p in [j.local_position, j.world_position] {
+        out.extend(v3(p));
+    }
+    assert_canonical("rescale", &out);
+}
+
+#[test]
+fn boundary_normalize_mesh() {
+    let v = cylinder_with_nan();
+    let nm = normalize_mesh(&MeshView::from_vertices(&v)).expect("a cylinder has height");
+    assert_canonical("normalize_mesh", &mesh_values(&nm));
+}
+
+#[test]
+fn boundary_slice_normalized() {
+    assert_canonical(
+        "slice_normalized",
+        &slice_values(&slice_normalized(&raw_normalized(), 20)),
+    );
+}
+
+#[test]
+fn boundary_build_hypothesis() {
+    let nm = raw_normalized();
+    let mut slices = slice_normalized(&nm, 20);
+    for s in &mut slices {
+        // the centroids as a caller may hold them: the payload NaN, not the canonical one
+        s.centroid.x = odd_nan();
+    }
+    let h = build_hypothesis(&nm, &slices).expect("the cylinder has a waist and a neck");
+    assert_canonical("build_hypothesis", &hypothesis_values(&h));
+}
+
+#[test]
+fn boundary_hypothesis_to_skeleton() {
+    let nm = raw_normalized();
+    let mut h = SkeletonHypothesis::default();
+    h.positions[0] = Some(nan3());
+    assert_canonical(
+        "hypothesis_to_skeleton",
+        &skeleton_values(&hypothesis_to_skeleton(&h, &nm)),
+    );
+}
+
+#[test]
+fn boundary_auto_rig() {
+    let v = cylinder_with_nan();
+    let r = auto_rig(&MeshView::from_vertices(&v), &AutoRigConfig::default()).expect("rigged");
+    let mut out = vec![r.confidence];
+    out.extend(skeleton_values(r.skeleton.as_ref().expect("a skeleton")));
+    out.extend(
+        r.skinning
+            .iter()
+            .flat_map(|s| s.weights.iter().flatten().copied()),
+    );
+    assert_canonical("auto_rig", &out);
+}
+
+#[test]
+fn boundary_auto_rig_on_sphere() {
+    let v = cylinder_with_nan();
+    let ctx = SphereContext {
+        center: Vec3k::new(0.0, -10.0, 0.0),
+        character_pos: Vec3k::ZERO,
+        radius: 10.0,
+    };
+    let r = auto_rig_on_sphere(
+        &MeshView::from_vertices(&v),
+        &ctx,
+        &AutoRigConfig::default(),
+    )
+    .expect("rigged");
+    let mut out = vec![r.confidence];
+    out.extend(skeleton_values(r.skeleton.as_ref().expect("a skeleton")));
+    assert_canonical("auto_rig_on_sphere", &out);
+}
+
+#[test]
+fn boundary_tangentframe_from_context() {
+    let ctx = SphereContext {
+        center: Vec3k::new(0.0, -10.0, 0.0),
+        character_pos: nan3(),
+        radius: 10.0,
+    };
+    let f = TangentFrame::from_context(&ctx);
+    let mut out = Vec::new();
+    for p in [f.right, f.up, f.forward, f.origin] {
+        out.extend(v3(p));
+    }
+    assert_canonical("from_context", &out);
 }
 
 // ---- encoder (AGPL feature) ----------------------------------------------------------------

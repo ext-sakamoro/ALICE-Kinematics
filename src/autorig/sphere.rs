@@ -106,11 +106,12 @@ impl TangentFrame {
         let forward = forward_raw.normalize();
         // right = up × forward、右手系で整合
         let right = up.cross(forward).normalize();
+        // origin is the caller's position as given (ALICE-Law G4, src/nan.rs)
         Self {
-            right,
-            up,
-            forward,
-            origin: ctx.character_pos,
+            right: crate::nan::canon3(right),
+            up: crate::nan::canon3(up),
+            forward: crate::nan::canon3(forward),
+            origin: crate::nan::canon3(ctx.character_pos),
         }
     }
 
