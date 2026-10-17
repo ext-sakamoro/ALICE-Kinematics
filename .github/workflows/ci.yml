@@ -48,13 +48,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (default, with the Law tests counted)
         working-directory: ALICE-Kinematics
-        run: scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=39 -- cargo test --lib --tests
+        run: scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=40 -- cargo test --lib --tests
       - name: cargo test (encoder, with the encoder's NaN boundaries counted)
         working-directory: ALICE-Kinematics
-        run: scripts/run_tests.sh law_max_min_ties=5,nan_boundaries=43 -- cargo test --lib --tests --features encoder
+        run: scripts/run_tests.sh law_max_min_ties=5,nan_boundaries=49 -- cargo test --lib --tests --features encoder
       - name: cargo test (lol bridge)
         working-directory: ALICE-Kinematics
-        run: cargo test --lib --tests --features lol
+        run: scripts/run_tests.sh nan_boundaries=41 -- cargo test --lib --tests --features lol
       - name: library has no rerun dependency (all features)
         working-directory: ALICE-Kinematics
         run: |
@@ -95,13 +95,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test --release (default, with the Law tests counted)
         working-directory: ALICE-Kinematics
-        run: scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=39 -- cargo test --release --lib --tests
+        run: scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=40 -- cargo test --release --lib --tests
       - name: cargo test --release (encoder, with the encoder's NaN boundaries counted)
         working-directory: ALICE-Kinematics
-        run: scripts/run_tests.sh law_max_min_ties=5,nan_boundaries=43 -- cargo test --release --lib --tests --features encoder
+        run: scripts/run_tests.sh law_max_min_ties=5,nan_boundaries=49 -- cargo test --release --lib --tests --features encoder
       - name: cargo test --release (lol bridge)
         working-directory: ALICE-Kinematics
-        run: cargo test --release --lib --tests --features lol
+        run: scripts/run_tests.sh nan_boundaries=41 -- cargo test --release --lib --tests --features lol
 
   float-environment:
     # ALICE-Law G14 on each OS: round-to-nearest-even and no flush-to-zero at run

@@ -261,7 +261,8 @@ fn make_intent(
 ) -> Intent {
     let is_left = matches!(hand, HandSide::Left);
     Intent {
-        target: Vec3k::new(target.x, target.y, target.z),
+        // a NaN coordinate leaves as the canonical NaN (ALICE-Law G4, src/nan.rs)
+        target: crate::nan::canon3(Vec3k::new(target.x, target.y, target.z)),
         duration_ms,
         flags: IntentFlags::new(ty, grip_closed, is_left, 0),
     }

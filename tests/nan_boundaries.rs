@@ -8,7 +8,8 @@
 //! asserts that a NaN does come out (so the test is not vacuous), and that every NaN that
 //! comes out has the canonical bits. The release build once turned a NaN's sign bit on
 //! inside the arm IK (`src/joint.rs`), so these run under debug and release on `x86_64` and
-//! `aarch64` (`scripts/run_tests.sh nan_boundaries=39` in each leg; 43 with `encoder`).
+//! `aarch64` (`scripts/run_tests.sh nan_boundaries=40` in each leg; 49 with `encoder`, 41 with
+//! `lol`).
 
 use alice_kinematics::autorig::skinning::point_to_segment_distance_sq;
 use alice_kinematics::autorig::slice::NormalizedMesh;
@@ -383,12 +384,25 @@ fn boundary_normalizedmesh_horizontal_extent() {
     assert_canonical("horizontal_extent", &[nan_mesh().horizontal_extent()]);
 }
 
+#[test]
+fn boundary_quinticcoeffs_from_boundary() {
+    // the start position and velocity are stored as c0 and c1; the end value alone for a
+    // zero duration
+    let moving = QuinticCoeffs::from_boundary(odd_nan(), odd_nan(), 0.0, 1.0, 0.5);
+    assert_canonical("from_boundary", &moving.c);
+    let instant = QuinticCoeffs::from_boundary(0.0, 0.0, 0.0, odd_nan(), 0.0);
+    assert_canonical("from_boundary (zero duration)", &instant.c);
+}
+
 // ---- encoder (AGPL feature) ----------------------------------------------------------------
 
 #[cfg(feature = "encoder")]
 mod encoder {
     use super::{assert_canonical, odd_nan, v3};
-    use alice_kinematics::jerk::{fitts_law_duration, minimum_jerk_cost, JerkFitter, MotionSample};
+    use alice_kinematics::encoder::{IntentEncoder, SensorSample};
+    use alice_kinematics::jerk::{
+        fitts_law_duration, minimum_jerk_cost, FitResult, JerkFitter, MotionSample,
+    };
     use alice_kinematics::Vec3k;
 
     fn fitter_with_nan() -> JerkFitter {
@@ -432,5 +446,115 @@ mod encoder {
             "fitts_law_duration",
             &[fitts_law_duration(1.0, 0.1, odd_nan(), 0.3)],
         );
+    }
+
+    /// eight samples of a reach along x, the first and the last one's x a NaN: the fit's
+    /// displacement and target are NaN, and its `start` is the first sample's position as stored
+    /// (the payload NaN reaches the output unless the fit canonicalises it)
+    fn reach_samples() -> Vec<MotionSample> {
+        (0..8_u8)
+            .map(|i| {
+                let t = f32::from(i) * 0.02;
+                let x = if i == 0 || i == 7 { odd_nan() } else { t * 0.5 };
+                MotionSample {
+                    pos: Vec3k::new(x, 0.01, 0.02),
+                    time: t,
+                }
+            })
+            .collect()
+    }
+
+    fn sensor(s: MotionSample) -> SensorSample {
+        SensorSample {
+            pos: s.pos,
+            vel: Vec3k::ZERO,
+            timestamp: s.time,
+        }
+    }
+
+    fn fit_values(f: &FitResult) -> Vec<f32> {
+        let mut v = Vec::new();
+        for p in [f.target, f.start, f.start_velocity] {
+            v.extend(v3(p));
+        }
+        v.extend([f.duration, f.fit_error, f.speed]);
+        v
+    }
+
+    fn encoder_with_nan() -> IntentEncoder {
+        let mut enc = IntentEncoder::new();
+        for s in reach_samples() {
+            let _ = enc.push_sample(sensor(s));
+        }
+        enc
+    }
+
+    #[test]
+    fn boundary_jerkfitter_fit_trajectory() {
+        let mut f = JerkFitter::new();
+        for s in reach_samples() {
+            f.push(s);
+        }
+        let fit = f.fit_trajectory().expect("eight samples over 0.14 s");
+        assert_canonical("fit_trajectory", &fit_values(&fit));
+    }
+
+    #[test]
+    fn boundary_intentencoder_push_sample() {
+        // the eighth sample reaches the tracking minimum and extracts the intent
+        let mut enc = IntentEncoder::new();
+        let mut out = None;
+        for s in reach_samples() {
+            if let Some(intent) = enc.push_sample(sensor(s)) {
+                out = Some(intent);
+            }
+        }
+        let intent = out.expect("an intent is extracted");
+        assert_canonical("push_sample", &v3(intent.target));
+    }
+
+    #[test]
+    fn boundary_intentencoder_force_extract() {
+        // a motion threshold no sample reaches: the encoder stays idle and keeps every
+        // sample, and the intent is extracted on demand
+        let mut enc = IntentEncoder::with_thresholds(1.0e9, 0.02, 0.0);
+        for s in reach_samples() {
+            assert!(enc.push_sample(sensor(s)).is_none(), "idle until forced");
+        }
+        let intent = enc.force_extract().expect("eight samples, the last a NaN");
+        assert_canonical("force_extract", &v3(intent.target));
+    }
+
+    #[test]
+    fn boundary_intentencoder_last_intent() {
+        let intent = encoder_with_nan().last_intent().expect("extracted");
+        assert_canonical("last_intent", &v3(intent.target));
+    }
+
+    #[test]
+    fn boundary_intentencoder_last_fit() {
+        let fit = encoder_with_nan().last_fit().expect("extracted");
+        assert_canonical("last_fit", &fit_values(&fit));
+    }
+}
+
+// ---- LOL bridge ----------------------------------------------------------------------------
+
+#[cfg(feature = "lol")]
+mod lol {
+    use super::{assert_canonical, odd_nan, v3};
+    use alice_kinematics::lol_bridge::intent_to_kinematics;
+    use alice_lol::intent::IntentNode;
+    use alice_lol::Vec3;
+
+    #[test]
+    fn boundary_intent_to_kinematics() {
+        let walk = IntentNode::Walk {
+            destination: Vec3::new(odd_nan(), 0.0, 1.0),
+            speed: 1.0,
+        };
+        let intents = intent_to_kinematics(&walk, &[]).expect("walk maps to a reach");
+        let values: Vec<f32> = intents.iter().flat_map(|i| v3(i.target)).collect();
+        assert_canonical("intent_to_kinematics", &values);
     }
 }

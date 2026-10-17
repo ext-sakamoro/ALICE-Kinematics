@@ -36,6 +36,10 @@ EXEMPT = {
                   "and every operation on the value is a boundary",
     "alice_lint_probe": "compiled only with --cfg alice_lint_probe for the clippy step's lint probe; "
                         "no build of the crate contains it",
+    "Intent::decode": "decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
+    "ExtendedIntent::decode": "decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
+    "intents": "an iterator of Intent::decode over the packets: decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
+    "extended_intents": "an iterator of ExtendedIntent::decode over the packets: decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
 }
 
 #: struct-carrier outputs (a returned crate type with public float fields) not converted yet:
@@ -43,12 +47,6 @@ EXEMPT = {
 #: in the branch that canonicalises its float fields and adds its `boundary_` test; the scan
 #: fails when an entry is no longer an output, or when a new struct-carrier output is not listed
 DEBT = [
-    # wire: packets in and out
-    "intents", "extended_intents", "Intent::decode", "ExtendedIntent::decode",
-    "IntentEncoder::push_sample", "IntentEncoder::force_extract", "IntentEncoder::last_intent",
-    "IntentEncoder::last_fit", "intent_to_kinematics",
-    # trajectory fit
-    "JerkFitter::fit_trajectory", "QuinticCoeffs::from_boundary",
     # skeleton and auto-rig
     "Skeleton::with_height", "Skeleton::default_humanoid", "Skeleton::find_joint",
     "build_hypothesis", "hypothesis_to_skeleton", "auto_rig", "auto_rig_on_sphere",

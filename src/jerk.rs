@@ -232,14 +232,17 @@ impl JerkFitter {
         let inv_count = 1.0 / self.count as f32;
         let rmse = fast_sqrt_jerk(total_error * inv_count);
 
-        Some(FitResult {
-            target,
-            start: first.pos,
-            duration: estimated_total_duration,
-            start_velocity: vel,
-            fit_error: rmse,
-            speed,
-        })
+        Some(
+            FitResult {
+                target,
+                start: first.pos,
+                duration: estimated_total_duration,
+                start_velocity: vel,
+                fit_error: rmse,
+                speed,
+            }
+            .canonical(),
+        )
     }
 }
 
@@ -258,6 +261,23 @@ pub struct FitResult {
     pub fit_error: f32,
     /// Current speed (m/s)
     pub speed: f32,
+}
+
+impl FitResult {
+    /// This fit with every NaN replaced by the canonical NaN (ALICE-Law G4, `src/nan.rs`): the
+    /// encoder's intents take their target from it
+    #[must_use]
+    pub(crate) fn canonical(self) -> Self {
+        use crate::nan::{canon, canon3};
+        Self {
+            target: canon3(self.target),
+            start: canon3(self.start),
+            duration: canon(self.duration),
+            start_velocity: canon3(self.start_velocity),
+            fit_error: canon(self.fit_error),
+            speed: canon(self.speed),
+        }
+    }
 }
 
 /// Fast sqrt for jerk module

@@ -37,7 +37,8 @@ impl QuinticCoeffs {
         if t < 1e-6 {
             return Self {
                 c: [xf, 0.0, 0.0, 0.0, 0.0, 0.0],
-            };
+            }
+            .canonical();
         }
         let t2 = t * t;
 
@@ -68,6 +69,15 @@ impl QuinticCoeffs {
 
         Self {
             c: [c0, c1, c2, c3, c4, c5],
+        }
+        .canonical()
+    }
+
+    /// These coefficients with every NaN replaced by the canonical NaN (ALICE-Law G4,
+    /// `src/nan.rs`): `c0` and `c1` are the caller's start position and velocity as given
+    fn canonical(self) -> Self {
+        Self {
+            c: self.c.map(crate::nan::canon),
         }
     }
 
