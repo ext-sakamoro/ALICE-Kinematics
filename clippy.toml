@@ -83,4 +83,18 @@ disallowed-methods = [
     { path = "f64::max", reason = "std documents that either zero may be returned for an equal pair of zeros, which differs by target and optimisation; use alice_det_math::max64" },
     { path = "f64::min", reason = "std documents that either zero may be returned for an equal pair of zeros, which differs by target and optimisation; use alice_det_math::min64" },
     { path = "f64::clamp", reason = "NaN passes through with its payload and inverted bounds panic; the crate has no f64 clamp, write it with alice_det_math::max64 / min64" },
+    # ALICE-Law G10: no output may read the wall clock or OS randomness (ALICE-DB's G10 entries;
+    # this crate has no RNG dependency, so no getrandom entry)
+    { path = "std::time::Instant::now", reason = "the wall clock makes results depend on timing; pass time in or use a step count" },
+    { path = "std::time::Instant::elapsed", reason = "reads the wall clock the same as Instant::now; duration_since on an already-held value is fine, this reads the clock again" },
+    { path = "std::time::SystemTime::elapsed", reason = "reads the wall clock the same as SystemTime::now; duration_since on an already-held value is fine, this reads the clock again" },
+    { path = "std::time::SystemTime::now", reason = "the wall clock makes results depend on timing; pass time in or use a step count" },
+    { path = "std::collections::hash_map::RandomState::new", reason = "seeds from OS randomness and would make HashMap iteration order non-deterministic" },
+]
+
+# ALICE-Law G13: no output may depend on hash iteration order (a BTreeMap / BTreeSet is the
+# ordered form)
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "iteration order is randomised per process; use BTreeMap" },
+    { path = "std::collections::HashSet", reason = "iteration order is randomised per process; use BTreeSet" },
 ]

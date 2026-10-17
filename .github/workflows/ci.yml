@@ -19,7 +19,14 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # x86_64 (ubuntu) and aarch64 (macOS): the Law tests (ALICE-Law G4) run on both
+    # architectures; scripts/run_tests.sh fails a leg whose binary ran fewer tests
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       # B.3 Milestone (2026-08-06): lol feature の optional path dep 対応
       # alice-lol と alice-sdf (alice-lol の transitive dep) を sibling checkout
@@ -39,12 +46,12 @@ jobs:
           repository: ext-sakamoro/ALICE-SDF
           path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
-      - name: cargo test (default)
+      - name: cargo test (default, with the Law tests counted)
         working-directory: ALICE-Kinematics
-        run: cargo test --lib --tests
-      - name: cargo test (encoder)
+        run: scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=5,stream_hello=14,float_environment=2,nan_boundaries=39 -- cargo test --lib --tests
+      - name: cargo test (encoder, with the encoder's NaN boundaries counted)
         working-directory: ALICE-Kinematics
-        run: cargo test --lib --tests --features encoder
+        run: scripts/run_tests.sh nan_boundaries=43 -- cargo test --lib --tests --features encoder
       - name: cargo test (lol bridge)
         working-directory: ALICE-Kinematics
         run: cargo test --lib --tests --features lol
@@ -58,6 +65,43 @@ jobs:
             echo "FAIL: rerun present in library dependency tree"; exit 1
           fi
           echo "OK: no rerun in $n dependency lines (all features)"
+
+  release:
+    # ALICE-Law G5: the whole test suite under the release profile, on x86_64 (ubuntu) and
+    # aarch64 (macOS, the target whose default codegen uses a hardware fma); the Law tests
+    # are counted as in the test job
+    name: Release (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: ALICE-Kinematics
+      - uses: actions/checkout@v5
+        with:
+          repository: ext-sakamoro/ALICE-LOL
+          path: ALICE-LOL
+      - uses: actions/checkout@v5
+        with:
+          repository: ext-sakamoro/ALICE-Zip
+          path: ALICE-Zip
+      - uses: actions/checkout@v5
+        with:
+          repository: ext-sakamoro/ALICE-SDF
+          path: ALICE-SDF
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test --release (default, with the Law tests counted)
+        working-directory: ALICE-Kinematics
+        run: scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=5,stream_hello=14,float_environment=2,nan_boundaries=39 -- cargo test --release --lib --tests
+      - name: cargo test --release (encoder, with the encoder's NaN boundaries counted)
+        working-directory: ALICE-Kinematics
+        run: scripts/run_tests.sh nan_boundaries=43 -- cargo test --release --lib --tests --features encoder
+      - name: cargo test --release (lol bridge)
+        working-directory: ALICE-Kinematics
+        run: cargo test --release --lib --tests --features lol
 
   float-environment:
     # ALICE-Law G14 on each OS: round-to-nearest-even and no flush-to-zero at run
@@ -185,6 +229,13 @@ jobs:
       - name: Clippy canary (every planted banned call is flagged)
         working-directory: ALICE-Kinematics
         run: python3 scripts/clippy_canary.py
+      # ALICE-Law G2: every public output returning an f32 value has a NaN test in
+      # tests/nan_boundaries.rs (the struct-returning ones not yet canonical are its counted DEBT)
+      - name: NaN boundaries (scanner tests, then the scan)
+        working-directory: ALICE-Kinematics
+        run: |
+          python3 scripts/test_nan_boundary_scan.py
+          python3 scripts/nan_boundary_scan.py
 
   fmt:
     runs-on: ubuntu-latest

@@ -51,6 +51,9 @@ python3 scripts/test_clippy_canary.py
 step "ci.yml / clippy: Clippy canary (every planted banned call is flagged)"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; python3 scripts/clippy_canary.py )
 
+step "ci.yml / clippy: NaN boundaries (scanner tests, then the scan)"
+python3 scripts/test_nan_boundary_scan.py
+python3 scripts/nan_boundary_scan.py
 step "ci.yml / float-environment: run_tests.sh and build configuration guard (tests, then check)"
 python3 scripts/test_run_tests.py
 python3 scripts/test_build_config_guard.py
@@ -79,15 +82,21 @@ if [[ $quick -eq 1 ]]; then
   echo; echo "preflight --quick OK (test / bench suites skipped)"; exit 0
 fi
 
-step "ci.yml / test: cargo test (default)"
-( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo test --lib --tests )
+step "ci.yml / test: cargo test (default, with the Law tests counted)"
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=5,stream_hello=14,float_environment=2,nan_boundaries=39 -- cargo test --lib --tests )
 
 step "ci.yml / test: cargo test (encoder)"
-( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo test --lib --tests --features encoder )
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh nan_boundaries=43 -- cargo test --lib --tests --features encoder )
 
 step "ci.yml / test: cargo test (lol bridge)"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo test --lib --tests --features lol )
 
+step "ci.yml / release: cargo test --release (default, with the Law tests counted)"
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=5,stream_hello=14,float_environment=2,nan_boundaries=39 -- cargo test --release --lib --tests )
+step "ci.yml / release: cargo test --release (encoder)"
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh nan_boundaries=43 -- cargo test --release --lib --tests --features encoder )
+step "ci.yml / release: cargo test --release (lol bridge)"
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo test --release --lib --tests --features lol )
 step "ci.yml / float-environment: Float environment (debug and release)"
 scripts/run_tests.sh float_environment=2 -- cargo test --test float_environment
 scripts/run_tests.sh float_environment=2 -- cargo test --release --test float_environment

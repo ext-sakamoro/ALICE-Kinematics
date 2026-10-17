@@ -32,13 +32,15 @@ reference_repo = "ALICE-DB"
 status = "pass"
 evidence = [
     "Cargo.toml [dependencies] alice-det-math 0.5.1 (default features off, no_std): the Law helpers alice_det_math::max / min (f32), max64 / min64 (f64) and alice_det_math::metric::clamp",
-    "library sites routed through them: src/jerk.rs lines 186, 206 and 207 (max / min) and 286 (clamp), src/hand.rs line 238, src/joint.rs line 436, src/autorig/skinning.rs line 88, src/lol_bridge.rs lines 276 and 286 (clamp); test code uses the same helpers (src/autorig/slice.rs lines 307, 308 and 325, tests/analytic_oracle.rs, tests/autorig_integration.rs)",
+    "library sites routed through them: src/jerk.rs lines 186, 206 and 207 (max / min) and 286 (clamp), src/hand.rs line 238, src/joint.rs line 437, src/autorig/skinning.rs line 88, src/lol_bridge.rs lines 276 and 286 (clamp); test code uses the same helpers (src/autorig/slice.rs lines 303, 307 and 324, tests/analytic_oracle.rs, tests/autorig_integration.rs)",
     "clippy.toml lines 80 to 85 (disallowed-methods f32::max, f32::min, f32::clamp, f64::max, f64::min, f64::clamp, for every target including tests)",
-    ".github/workflows/ci.yml clippy steps (encoder line 143, std line 149, all features line 154, RUSTFLAGS=-Dwarnings) and the clippy canary (lines 174 to 185: scripts/clippy_canary_calls.tsv is generated from clippy.toml, 59 planted calls including the six above, each must be flagged)",
+    ".github/workflows/ci.yml clippy steps (encoder line 191, std line 197, all features line 202, RUSTFLAGS=-Dwarnings) and the clippy canary (lines 220 to 231: scripts/clippy_canary_calls.tsv is generated from clippy.toml, 66 planted calls including the six above, each must be flagged)",
+    "src/nan.rs: canon / canon3 (alice_det_math::metric::clamp with infinite bounds: a NaN becomes 0x7fc0_0000, -0 and the infinities are unchanged) applied to every public output returning an f32 value and to the angle Joint::set_angle stores; tests/nan_boundaries.rs has one test per such output (39 in the default build, 43 with encoder), each feeding a NaN with sign bit and payload set and comparing the output bits",
+    "scripts/nan_boundary_scan.py (tests scripts/test_nan_boundary_scan.py; ci.yml line 234, clippy job): lists the public outputs and fails when one is neither tested, exempt with a reason, nor in its DEBT list, and when it compares nothing",
 ]
 mutant = "measured 2026-10-17, each reverted: restoring `s_profile(duration * x).max(1e-12)` at src/jerk.rs line 186 fails the clippy (encoder) step with `use of a disallowed method f32::max` (the jerk module is encoder-gated, so the std step does not build it); restoring `(sec * 1000.0).clamp(20.0, 255.0)` at src/lol_bridge.rs line 276 fails the clippy (all features) step with `use of a disallowed method f32::clamp`"
 since = ""
-note = "raw f32 / f64 max, min and clamp are a default-deny in clippy.toml, with no exception and so no raw_* manifest. The helpers come from alice-det-math, the owner of these Laws, rather than a local copy: max / min give an equal pair of zeros a defined sign (+0 from max, -0 from min, where std documents that either may be returned) and a NaN operand the other operand; clamp gives the canonical NaN for a NaN argument and lets the low bound win for inverted bounds (std passes a NaN through with its payload and panics on inverted bounds). On the inputs the sites see (finite values, constant bounds) the results are the bits std gave; the tests that pin the packet encodings pass unchanged. The default build is no_std; the helpers are core-only, so every build uses them. The crate builds no SIMD path (grep for target_feature, core::arch, std::arch and simd over src and Cargo.toml: 0), so the per-width test list is empty. f32::clamp and the f64 forms are not named by the gate; they are banned for the same reason. The scalar zero-sign and NaN behaviour of the helpers is alice-det-math's and is tested there. A comparison written out by hand is not a call the ban sees, so tests/law_max_min_ties.rs compares bits at the public API at the tie inputs (-0, a NaN with a payload) for each site class where such an input reaches the site: grip (src/hand.rs line 238: -0 stays -0, NaN becomes the canonical NaN), the inverse kinematics cosine clamp (src/joint.rs line 436: a NaN target gives the canonical NaN in every angle), the jerk fit progress min (src/jerk.rs line 207, encoder: a NaN timestamp still gives progress 1); measured 2026-10-17, each reverted, red for: grip as `if a < 0 {0} else if a > 1 {1} else {a}`, as `if a > 0 {..} else {0}`, as std clamp, as std max then min; the cosine clamp as comparisons and as std clamp; the progress min as `if a > 1 {1} else {a}`. Sites no tie input reaches from the public API: src/autorig/skinning.rs line 88 (the squared distance drops the sign of zero and the point's NaN reaches the result first; two comparison rewrites leave the test green, which pins that), src/jerk.rs line 186 and 206 (max against 1e-12 / 1e-6 of a value that is finite and non-negative there, so neither a zero tie nor a NaN occurs) and line 286 (the s_profile clamp: a -0 only feeds a comparison and a max against 1e-6), src/lol_bridge.rs lines 276 and 286 (the result is cast to u8, where NaN and both zeros give the same byte for every form)."
+note = "raw f32 / f64 max, min and clamp are a default-deny in clippy.toml, with no exception and so no raw_* manifest. The helpers come from alice-det-math, the owner of these Laws, rather than a local copy: max / min give an equal pair of zeros a defined sign (+0 from max, -0 from min, where std documents that either may be returned) and a NaN operand the other operand; clamp gives the canonical NaN for a NaN argument and lets the low bound win for inverted bounds (std passes a NaN through with its payload and panics on inverted bounds). On the inputs the sites see (finite values, constant bounds) the results are the bits std gave; the tests that pin the packet encodings pass unchanged. The default build is no_std; the helpers are core-only, so every build uses them. The crate builds no SIMD path (grep for target_feature, core::arch, std::arch and simd over src and Cargo.toml: 0), so the per-width test list is empty. f32::clamp and the f64 forms are not named by the gate; they are banned for the same reason. The scalar zero-sign and NaN behaviour of the helpers is alice-det-math's and is tested there. A comparison written out by hand is not a call the ban sees, so tests/law_max_min_ties.rs compares bits at the public API at the tie inputs (-0, a NaN with a payload) for each site class where such an input reaches the site: grip (src/hand.rs line 238: -0 stays -0, NaN becomes the canonical NaN), the inverse kinematics cosine clamp (src/joint.rs line 437: a NaN target gives the canonical NaN in every angle), the jerk fit progress min (src/jerk.rs line 207, encoder: a NaN timestamp still gives progress 1); measured 2026-10-17, each reverted, red for: grip as `if a < 0 {0} else if a > 1 {1} else {a}`, as `if a > 0 {..} else {0}`, as std clamp, as std max then min; the cosine clamp as comparisons and as std clamp; the progress min as `if a > 1 {1} else {a}`. Sites no tie input reaches from the public API: src/autorig/skinning.rs line 88 (the squared distance drops the sign of zero and the point's NaN reaches the result first; two comparison rewrites leave the test green, which pins that), src/jerk.rs line 186 and 206 (max against 1e-12 / 1e-6 of a value that is finite and non-negative there, so neither a zero tie nor a NaN occurs) and line 286 (the s_profile clamp: a -0 only feeds a comparison and a max against 1e-6), src/lol_bridge.rs lines 276 and 286 (the result is cast to u8, where NaN and both zeros give the same byte for every form). NaN operands: each tie test's NaN case compares the result with the canonical NaN 0x7fc0_0000 (Law text, G2) in debug and release on both architectures; the release build had set the sign bit of the IK's NaN angles (src/joint.rs line 462, `sign * angle` lowered to a select of fneg), fixed by canonicalising at the outputs (src/nan.rs). The struct-returning outputs that are still raw are G4's located debt, not G2's."
 reference_repo = "ALICE-Physics"
 
 [G3]
@@ -60,13 +62,25 @@ reference_repo = "ALICE-LOL"
 
 [G4]
 status = "fail-known"
-note = "no signed-zero or exact-cancellation golden test exists: tests/ holds tests/analytic_oracle.rs (tolerance-based comparisons against closed-form or f64 references) and tests/autorig_integration.rs, neither compares against a fixed expected bit pattern, and the library tests assert f32::EPSILON-level closeness (src/predictor.rs:488,548; src/lol_bridge.rs:326). CI runs the tests on one leg, ubuntu-latest (x86_64) in debug (.github/workflows/ci.yml:22,44,47,50): no release profile, no aarch64 runner, so the four {debug, release} x {x86_64, aarch64} legs are not present as required jobs."
-reference_repo = "ALICE-LOL"
+evidence = [
+    "tests/float_edge_golden.rs (4 tests): +0 and -0 coordinates encode to the same Intent packet and decode to +0 bits; a rest-to-rest quintic from 0 to 1 over T = 1 ends exactly at position 1.0 with velocity and acceleration +0 (c3 = 10, c4 = -15, c5 = 6: 30 - 60 + 30 and 60 - 180 + 120 cancel exactly); zero displacement and the zero-duration branch hold their value with +0 velocity and acceleration (a -0 start velocity included), all against fixed bit patterns; a NaN start gives the canonical NaN 0x7fc0_0000 in position, velocity and acceleration at every time",
+    ".github/workflows/ci.yml test job (line 21, matrix ubuntu-latest and macos-latest: x86_64 and aarch64) and release job (line 69, same matrix, --release): scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=5,stream_hello=14,float_environment=2,nan_boundaries=39 (lines 51 and 98) fails a leg whose binary ran fewer tests",
+]
+mutant = "measured 2026-10-17, each reverted: a decode that returns -0 for a zero coordinate (src/intent.rs q8_to_f32) fails signed_zero_coordinates_encode_and_decode_to_the_recorded_bits; c3's 20.0 changed to 20.000002 (src/predictor.rs from_boundary) fails a_rest_to_rest_end_cancels_exactly; removing the canonicalisation at one output (QuinticCoeffs::position returning its sum raw) fails a_nan_start_gives_the_canonical_nan, boundary_quinticcoeffs_position and boundary_predictor_position_at on all four legs (debug and release, aarch64 natively and x86_64 under Rosetta)"
+since = ""
+note = "unmet (Law text r4: a NaN reaching a Law output is the canonical quiet NaN): 40 public outputs that return a crate struct with float fields (Intent / ExtendedIntent decode, IntentEncoder, the jerk fit, the skeleton and auto-rig, constructors) are not canonicalised yet; scripts/nan_boundary_scan.py lists them as its DEBT (count printed, drift fails) and each leaves the list with its own test when converted. Covered: every output returning an f32 value (tests/nan_boundaries.rs, 39 / 43 with encoder). The patterns were recorded from this build and also run as x86_64 under Rosetta (debug and release, 3 passed each) besides the aarch64 runs; the equalities that hold without the recording (+0 == -0 packet, exact end values) are asserted separately."
+reference_repo = "ALICE-DB"
 
 [G5]
-status = "fail-known"
-note = "no CI step runs the test suite under the release profile and no job uses an aarch64 runner: .github/workflows/ci.yml:44,47,50 are `cargo test --lib --tests` (with and without --features encoder, --features lol) without --release, all on ubuntu-latest (ci.yml:22); the other workflow, .github/workflows/example-rerun-viz.yml:29, is also ubuntu-latest and builds the non-library example only."
-reference_repo = "ALICE-LOL"
+status = "pass"
+evidence = [
+    ".github/workflows/ci.yml release job (line 69): on ubuntu-latest (x86_64) and macos-latest (aarch64), cargo test --release --lib --tests with the default features (the Law tests counted by scripts/run_tests.sh semantics_golden=5,kin_semantics_id=11,float_edge_golden=3,law_max_min_ties=5,stream_hello=14,float_environment=2,nan_boundaries=39, line 98), with encoder (nan_boundaries=43, line 101) and with lol",
+    "scripts/preflight.sh runs the same release steps in its full part",
+]
+mutant = "measured 2026-10-17: the release leg found a real divergence when it was added: tests/law_max_min_ties.rs::arm_inverse_kinematics_with_a_nan_target passed in debug (angles 0x7fc0_0000) and failed under --release (0xffc0_0000); with the fix (src/nan.rs), making canon the identity again fails it in release only (debug stays green), so this leg is what holds it"
+since = ""
+note = "the aarch64 release leg is macOS (Apple Silicon); the Law tests are the six recorded-bit and edge suites plus nan_boundaries, counted so a feature or target mismatch cannot run fewer."
+reference_repo = "ALICE-DB"
 
 [G6]
 status = "pass"
@@ -109,9 +123,16 @@ status = "unverified"
 note = "unverified: both identifiers are introduced in 0.3.0 (KIN_WIRE_SEMANTICS_ID for G8, KIN_SEMANTICS_ID for G6), so there is no history to audit yet and no identifier-history test; KIN_PREVIOUS_WIRE_SEMANTICS_IDS and KIN_PREVIOUS_SEMANTICS_IDS are empty. The first move of either has to be recorded in CHANGELOG.md as a breaking (minor for 0.x) release with both values named, and a test that reads a stream stamped with the earlier value."
 
 [G10]
-status = "fail-known"
-note = "no lint or scan bans run-varying sources: there is no clippy.toml (so no disallowed-methods / disallowed-types for SystemTime::now, Instant::now, thread_rng, RandomState) and no scan step in .github/workflows/ci.yml or scripts/. Today's tree reads none of them: a grep for SystemTime, Instant, thread_rng, rand::, Uuid, from_entropy, RandomState, HashMap, HashSet, rayon and thread:: over src, tests and examples matches only examples/rerun-viz/Cargo.lock (the non-library example's lock file), and the library is #![no_std] (src/lib.rs:39) with the std feature empty (Cargo.toml: std = []); the jerk module takes timestamps as input (MotionSample, src/jerk.rs:20). That is a one-off grep, not a gate."
-reference_repo = "ALICE-Analytics"
+status = "pass"
+evidence = [
+    "tests/semantics_golden.rs (5 scenarios, SHA-256 of the output bits: intent encode, extended intent encode, quintic trajectory, arm inverse kinematics, packet decode) and tests/float_edge_golden.rs run in debug and release on x86_64 and aarch64 (ci.yml test job line 21 and release job line 69): the Law-bearing output is a function of its inputs only",
+    "clippy.toml lines 88 to 92 (disallowed-methods std::time::Instant::now / ::elapsed, SystemTime::now / ::elapsed, hash_map::RandomState::new) for every target, run by the clippy steps (ci.yml lines 191, 197, 202, RUSTFLAGS=-Dwarnings)",
+    "scripts/clippy_canary.py plants every one of those entries (scripts/clippy_canary_calls.tsv, generated from clippy.toml: 66 rows) and fails unless clippy flags each (ci.yml line 231)",
+]
+mutant = "measured 2026-10-17, reverted: a library function calling std::time::Instant::now().elapsed() fails the clippy (std) step with `disallowed method std::time::Instant::now` and `... ::elapsed`; one changed output bit in any golden scenario fails its test"
+since = ""
+note = "the crate has no RNG and no clock dependency: no time or randomness is part of its computation, and the bans keep it so (time enters only as an explicit input, e.g. Predictor::update's dt)."
+reference_repo = "ALICE-DB"
 
 [G11]
 status = "unverified"
@@ -136,8 +157,15 @@ since = ""
 reference_repo = "ALICE-DB"
 
 [G13]
-status = "fail-known"
-note = "machine half: the lint is absent, there is no clippy.toml (so no disallowed-types / disallowed-methods for HashMap, HashSet and RandomState) and no order-independence test (no ordered-reduction test at two thread counts) in tests/ or in .github/workflows/ci.yml. Audit half: no HashMap or HashSet, no rayon, no thread spawn and no par_iter in src, tests or examples (grep, see G10; the only match is examples/rerun-viz/Cargo.lock), so no Law-bearing output reads an unspecified order in src today; that is a one-off grep, not a gate. Not n/a: that status needs a scanner finding zero sites with the mutant of adding one, and there is none."
+status = "pass"
+evidence = [
+    "clippy.toml lines 97 to 100: disallowed-types std::collections::HashMap and HashSet (with RandomState::new already banned for G10), so no hash iteration order can reach an output; the canary plants each",
+    "src/ has no HashMap, HashSet, rayon, std::thread or par_iter (grep), so no output depends on iteration order, thread count or a parallel reduction order",
+]
+mutant = "measured 2026-10-17, reverted: a library function constructing a HashMap fails the clippy (std) step with `disallowed type std::collections::HashMap`; the canary plants both types and fails unless clippy flags each"
+since = ""
+note = "the order-independence test the gate names has nothing to vary here: the crate is single-threaded and holds no hash container; the ban keeps it so (BTreeMap / BTreeSet are the allowed forms)."
+reference_repo = "ALICE-Crypto"
 
 [G14]
 status = "pass"
