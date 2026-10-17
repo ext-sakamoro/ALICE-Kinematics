@@ -165,6 +165,15 @@ jobs:
           # scripts/changed_paths.py decides whether g3-ir.yml's IR job runs; its own tests
           python3 scripts/test_changed_paths.py
 
+      # ALICE-Law G11 (c), on each OS (the Windows leg exercises the checker's line-ending
+      # path): the files shared with the other crates are the bytes ALICE-Law's table records
+      # (table and checker fetched at .github/shared-files-pin, both SHA-256 pinned); a
+      # difference, an unlisted shared path or nothing compared fails
+      - name: Shared files equal ALICE-Law's table
+        run: |
+          python3 scripts/test_shared_files.py
+          scripts/shared_files.sh
+
   clippy:
     runs-on: ubuntu-latest
     steps:
@@ -268,15 +277,6 @@ jobs:
       - name: Identifier moves (against the published release)
         working-directory: ALICE-Kinematics
         run: python3 scripts/id_move_check.py
-      # ALICE-Law G11 (c): the files shared with the other crates are the bytes ALICE-Law's
-      # table records (table and checker fetched at .github/shared-files-pin, both SHA-256
-      # pinned); a difference, an unlisted shared path or nothing compared fails
-      - name: Shared files equal ALICE-Law's table
-        working-directory: ALICE-Kinematics
-        shell: bash
-        run: |
-          python3 scripts/test_shared_files.py
-          scripts/shared_files.sh
 
   fmt:
     runs-on: ubuntu-latest
