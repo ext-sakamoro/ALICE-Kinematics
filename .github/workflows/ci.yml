@@ -171,6 +171,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
+          # the release tags: scripts/id_move_check.py compares with the newest one
+          fetch-depth: 0
       - uses: actions/checkout@v5
         with:
           repository: ext-sakamoro/ALICE-LOL
@@ -247,6 +249,25 @@ jobs:
           python3 scripts/test_order_guard.py
           python3 scripts/entropy_guard.py
           python3 scripts/order_guard.py
+      # G9: an identifier (KIN_SEMANTICS_ID, KIN_WIRE_SEMANTICS_ID) moves only with a breaking version, with the
+      # released value in its previous list (when it has one) and both values named in
+      # CHANGELOG.md; the released value is read from the published crate at the newest
+      # release tag (scripts/id_move_check.py, shared with the other ALICE crates). A
+      # registry that cannot be read fails on main and warns on ci/ branches and PRs
+      - name: Identifier moves (tests)
+        working-directory: ALICE-Kinematics
+        run: python3 scripts/test_id_move_check.py
+      - name: Identifier moves (the release compared with)
+        working-directory: ALICE-Kinematics
+        id: id-base
+        run: echo "crate=$(python3 scripts/id_move_check.py --print-base)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cargo/registry/cache/*/${{ steps.id-base.outputs.crate }}.crate
+          key: id-move-${{ steps.id-base.outputs.crate }}
+      - name: Identifier moves (against the published release)
+        working-directory: ALICE-Kinematics
+        run: python3 scripts/id_move_check.py
 
   fmt:
     runs-on: ubuntu-latest

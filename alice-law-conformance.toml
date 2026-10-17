@@ -133,6 +133,10 @@ reference_repo = "ALICE-DB"
 
 [G9]
 status = "unverified"
+evidence = [
+    "scripts/id_move_check.py (shared with the other ALICE crates that carry an identifier; tests scripts/test_id_move_check.py; config scripts/id_move.toml): builds a probe against the published release of the newest release tag (alice-kinematics 0.2.1 today) and against the working tree, reads semantics::KIN_SEMANTICS_ID and semantics::KIN_WIRE_SEMANTICS_ID (both carried by the stream hello, src/stream.rs) as values and fails when one moved without a breaking version, without the released value in KIN_PREVIOUS_SEMANTICS_IDS / KIN_PREVIOUS_WIRE_SEMANTICS_IDS, or without CHANGELOG.md naming both; every const / static / associated const of type [u8; 32] and every public re-export of another crate's constant must be listed or exempt; .github/workflows/ci.yml clippy job and scripts/preflight.sh; today: both are new since 0.2.1 (440a6e99, d5ae6ab1)",
+]
+mutant = "measured 2026-10-17, reverted: scripts/id_move.toml naming another path for the wire identifier makes scripts/id_move_check.py exit 1 (`KIN_WIRE_SEMANTICS_ID (src/semantics.rs:96): a [u8; 32] item that is neither an [[id]] ...`)"
 note = "unverified: both identifiers are introduced in 0.3.0 (KIN_WIRE_SEMANTICS_ID for G8, KIN_SEMANTICS_ID for G6), so there is no history to audit yet and no identifier-history test; KIN_PREVIOUS_WIRE_SEMANTICS_IDS and KIN_PREVIOUS_SEMANTICS_IDS are empty. The first move of either has to be recorded in CHANGELOG.md as a breaking (minor for 0.x) release with both values named, and a test that reads a stream stamped with the earlier value."
 
 [G10]

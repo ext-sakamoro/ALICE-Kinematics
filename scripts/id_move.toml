@@ -1,0 +1,14 @@
+# scripts/id_move_check.py (ALICE-Law G9): the identifiers whose value may move only with a
+# breaking version, the previous-identifier list that must keep the released value, and the
+# release tags the base is read from (its values come from the published crate)
+package = "alice-kinematics"
+manifest = "Cargo.toml"
+tags = ["v{version}", "alice-kinematics-v{version}"]
+
+[[id]]
+path = "alice_kinematics::semantics::KIN_SEMANTICS_ID"
+previous = "alice_kinematics::semantics::KIN_PREVIOUS_SEMANTICS_IDS"
+
+[[id]]
+path = "alice_kinematics::semantics::KIN_WIRE_SEMANTICS_ID"
+previous = "alice_kinematics::semantics::KIN_PREVIOUS_WIRE_SEMANTICS_IDS"

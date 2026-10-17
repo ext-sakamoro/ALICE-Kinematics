@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- CI (ALICE-Law G9): `scripts/id_move_check.py` (ALICE の識別子を持つ crate で共有、ALICE-Zip と同じ file) を追加 最新の release tag の公開版と作業 tree で `KIN_SEMANTICS_ID` と `KIN_WIRE_SEMANTICS_ID` の値を読み、動いたのに破壊的な版になっていない / 公開版の値が以前の識別子の一覧に無い / CHANGELOG が両方の値を書いていない時に fail する (ci.yml の clippy job と preflight)
 - `tests/float_edge_golden.rs` (ALICE-Law G4): 正負のゼロの座標が同じ packet に encode され +0 に decode されること、0 から 1 への静止→静止の 5 次軌道が T で位置 1.0・速度と加速度 +0 にちょうど打ち消し合うこと (c3 = 10、c4 = -15、c5 = 6)、変位 0 と所要時間 0 の分岐が値を保つことを固定の bit で比べる 3 件 debug と release、x86_64 (ubuntu) と aarch64 (macOS) で走る
 - `tests/nan_boundaries.rs` と `scripts/nan_boundary_scan.py` (試験 `scripts/test_nan_boundary_scan.py`、ALICE-Law G2): f32 の値を返す公開関数ごとに、符号 bit と payload の立った NaN を入れて出てくる NaN が `0x7fc0_0000` であることを bit で比べる (既定 39 件、encoder 43 件) scan は公開関数を列挙し、試験も理由つきの除外も無いもの、試験の名前がどの関数も指さないもの、比較 0 件を失敗にする float の公開 field を持つ crate の型を返す 40 の関数はまだ正準化していないので `DEBT` として数え、増減を失敗にする
 - CI (ALICE-Law G4 / G5): test job を ubuntu (x86_64) と macOS (aarch64) の matrix にし、`--release` で同じ試験を走らせる release job を足した Law の試験 (`semantics_golden` / `kin_semantics_id` / `float_edge_golden` / `law_max_min_ties` / `stream_hello` / `float_environment` / `nan_boundaries`) は `scripts/run_tests.sh` で件数を数える
