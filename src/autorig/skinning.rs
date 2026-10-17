@@ -136,14 +136,17 @@ pub fn distance_based_skinning(
             } else {
                 torso_max_sq
             };
-            if dist_sq > max_sq {
+            // a NaN distance (a NaN coordinate) is out of range, not a candidate (`>` alone
+            // would let it through)
+            if dist_sq.is_nan() || dist_sq > max_sq {
                 continue;
             }
             dists.push((dist_sq, i as u16));
         }
 
         // 距離昇順ソート、top-4 を取る
-        dists.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(core::cmp::Ordering::Equal));
+        // every candidate distance is a number here; total_cmp is a total order regardless
+        dists.sort_by(|a, b| a.0.total_cmp(&b.0));
         dists.truncate(4);
 
         // 4 に満たない場合は sentinel で埋める (weight 0 で影響なし)
@@ -286,6 +289,25 @@ mod tests {
         let sk = distance_based_skinning(&mesh, &skel, &InfluenceRadii::default());
         assert_eq!(sk.bone_indices.len(), 2);
         assert_eq!(sk.weights.len(), 2);
+    }
+
+    /// A vertex whose distances are all NaN (a NaN coordinate) is near no bone: it gets the
+    /// isolated-vertex fallback (Hips 100%, the sentinel indices), whatever order a sort would
+    /// give NaN distances
+    #[test]
+    fn a_nan_vertex_has_no_candidate_bone() {
+        let skeleton = Skeleton::default_humanoid();
+        let vertices = [Vec3k::new(f32::NAN, 0.5, 0.0), Vec3k::new(0.0, 0.9, 0.0)];
+        let mesh = MeshView::from_vertices(&vertices);
+        let s = distance_based_skinning(&mesh, &skeleton, &InfluenceRadii::default());
+        assert_eq!(s.bone_indices[0], [0, 0, 0, 0]);
+        assert_eq!(
+            s.weights[0].map(f32::to_bits),
+            [1.0_f32, 0.0, 0.0, 0.0].map(f32::to_bits)
+        );
+        // the finite vertex is skinned to bones within range, weights summing to 1
+        let sum: f32 = s.weights[1].iter().sum();
+        assert!((sum - 1.0).abs() < 1e-5, "{sum}");
     }
 
     #[test]
