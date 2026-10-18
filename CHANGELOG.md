@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- CI: text の file の行末の検査 `scripts/check_eol.py` (試験 `scripts/test_check_eol.py`) と `.github/workflows/eol.yml` を足した `git ls-files --eol` で text の file が index か working tree で CRLF / 混在なら失敗 (`-text` と binary は除く、比べた数を出し 0 件は失敗)、workflow は ubuntu / macos / windows で走り、preflight にも同じ検査を足した (ALICE の crate で同じ中身の file)
 - CI (ALICE-Law G11): 他の ALICE crate と byte 一致で共有する file を ALICE-Law の表と照合する `scripts/shared_files.sh` (表と検査器は `.github/shared-files-pin` の版を SHA-256 付きで取得) と試験を float-environment job (ubuntu / macOS / Windows) と preflight に追加 違い・表に無い共有 path・比較 0 件は失敗する
 - CI (ALICE-Law G9): `scripts/id_move_check.py` (ALICE の識別子を持つ crate で共有、ALICE-Zip と同じ file) を追加 最新の release tag の公開版と作業 tree で `KIN_SEMANTICS_ID` と `KIN_WIRE_SEMANTICS_ID` の値を読み、動いたのに破壊的な版になっていない / 公開版の値が以前の識別子の一覧に無い / CHANGELOG が両方の値を書いていない時に fail する (ci.yml の clippy job と preflight)
 - `tests/float_edge_golden.rs` (ALICE-Law G4): 正負のゼロの座標が同じ packet に encode され +0 に decode されること、0 から 1 への静止→静止の 5 次軌道が T で位置 1.0・速度と加速度 +0 にちょうど打ち消し合うこと (c3 = 10、c4 = -15、c5 = 6)、変位 0 と所要時間 0 の分岐が値を保つことを固定の bit で比べる 3 件 debug と release、x86_64 (ubuntu) と aarch64 (macOS) で走る
