@@ -5,6 +5,8 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `conformance/g11-own.toml`: ALICE-Law G11 の表のうち、この crate 固有の行 (G2 の max / min の tie、G4 / G5 の golden、G6 の識別子、G7 / G8 の hello frame の識別子の照合、比較 0 件は `scripts/run_tests.sh` の試験) 共有の検査器の行は ALICE-Law の `conformance/g11-shared-rows.toml` から生成する
+- `tests/semantics_golden.rs`: `checker_rejects_a_wrong_digest` を追加 動いた bit の digest が記録と一致しないことを確かめる (比較を常に一致にする変異でこの試験だけが失敗する) CI と preflight の `scripts/run_tests.sh` の最小数を `semantics_golden=6` にした
 - CI: text の file の行末の検査 `scripts/check_eol.py` (試験 `scripts/test_check_eol.py`) と `.github/workflows/eol.yml` を足した `git ls-files --eol` で text の file が index か working tree で CRLF / 混在なら失敗 (`-text` と binary は除く、比べた数を出し 0 件は失敗)、workflow は ubuntu / macos / windows で走り、preflight にも同じ検査を足した (ALICE の crate で同じ中身の file)
 - CI (ALICE-Law G11): 他の ALICE crate と byte 一致で共有する file を ALICE-Law の表と照合する `scripts/shared_files.sh` (表と検査器は `.github/shared-files-pin` の版を SHA-256 付きで取得) と試験を float-environment job (ubuntu / macOS / Windows) と preflight に追加 違い・表に無い共有 path・比較 0 件は失敗する
 - CI (ALICE-Law G9): `scripts/id_move_check.py` (ALICE の識別子を持つ crate で共有、ALICE-Zip と同じ file) を追加 最新の release tag の公開版と作業 tree で `KIN_SEMANTICS_ID` と `KIN_WIRE_SEMANTICS_ID` の値を読み、動いたのに破壊的な版になっていない / 公開版の値が以前の識別子の一覧に無い / CHANGELOG が両方の値を書いていない時に fail する (ci.yml の clippy job と preflight)

@@ -1,0 +1,51 @@
+# ALICE-Law G11: this repository's own rows of conformance/g11.toml (the rows of the checkers the ALICE
+# crates share are generated from ALICE-Law). ALICE-Law's scripts/g11_table_gen.py writes conformance/g11.toml
+# from both (python3 scripts/g11_table_gen.py --repo <this repository> --name ALICE-Kinematics --write, run in
+# an ALICE-Law checkout); the table is committed with the regeneration of ALICE-Law's shared-files table that
+# lists this repository, not before.
+#
+# The Law suites are run by scripts/run_tests.sh, which fails a step when a named test binary ran fewer tests
+# than named; its zero test is therefore the compared-nothing test of each leg, and each canary is a test of a
+# binary the leg names.
+
+[[row]]
+gate = "G2"
+checker = ".github/workflows/ci.yml#- name: cargo test (default, with the Law tests counted)>scripts/run_tests.sh"
+canary = "tests/law_max_min_ties.rs::grip_of_negative_zero_keeps_the_sign_of_zero"
+zero = "scripts/test_run_tests.py::RunTests.test_a_named_file_that_ran_zero_fails"
+shared = ["scripts/run_tests.sh", "scripts/test_run_tests.py"]
+
+[[row]]
+gate = "G4"
+checker = ".github/workflows/ci.yml#- name: cargo test (default, with the Law tests counted)>scripts/run_tests.sh"
+canary = "tests/semantics_golden.rs::checker_rejects_a_wrong_digest"
+zero = "scripts/test_run_tests.py::RunTests.test_a_named_file_that_ran_zero_fails"
+shared = ["scripts/run_tests.sh", "scripts/test_run_tests.py"]
+
+[[row]]
+gate = "G5"
+checker = ".github/workflows/ci.yml#- name: cargo test --release (default, with the Law tests counted)>scripts/run_tests.sh"
+canary = "tests/semantics_golden.rs::checker_rejects_a_wrong_digest"
+zero = "scripts/test_run_tests.py::RunTests.test_a_named_file_that_ran_zero_fails"
+shared = ["scripts/run_tests.sh", "scripts/test_run_tests.py"]
+
+[[row]]
+gate = "G6"
+checker = ".github/workflows/ci.yml#- name: cargo test (default, with the Law tests counted)>scripts/run_tests.sh"
+canary = "tests/kin_semantics_id.rs::one_changed_bit_in_any_entry_changes_the_identifier"
+zero = "scripts/test_run_tests.py::RunTests.test_a_named_file_that_ran_zero_fails"
+shared = ["scripts/run_tests.sh", "scripts/test_run_tests.py"]
+
+[[row]]
+gate = "G7"
+checker = ".github/workflows/ci.yml#- name: cargo test (default, with the Law tests counted)>scripts/run_tests.sh"
+canary = "tests/stream_hello.rs::only_the_semantics_identifier_changed_is_a_semantics_mismatch"
+zero = "scripts/test_run_tests.py::RunTests.test_a_named_file_that_ran_zero_fails"
+shared = ["scripts/run_tests.sh", "scripts/test_run_tests.py"]
+
+[[row]]
+gate = "G8"
+checker = ".github/workflows/ci.yml#- name: cargo test (default, with the Law tests counted)>scripts/run_tests.sh"
+canary = "tests/stream_hello.rs::only_the_wire_identifier_changed_is_a_wire_mismatch"
+zero = "scripts/test_run_tests.py::RunTests.test_a_named_file_that_ran_zero_fails"
+shared = ["scripts/run_tests.sh", "scripts/test_run_tests.py"]
