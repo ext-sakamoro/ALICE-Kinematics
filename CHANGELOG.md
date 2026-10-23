@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- CI: `security-audit` workflow: cargo audit と cargo deny (`deny.toml` を追加) を、`.github/alice-siblings` に固定した実物の sibling (ALICE-LOL / ALICE-SDF / ALICE-Zip) と毎回新しい解決で走らせる (依存や設定の変更時、週次 水曜 04:23 UTC、手動) 解決と cargo deny の graph がこの crate と path の sibling を含むことを `scripts/sibling_coverage_guard.py` (試験付き) で確かめ、0 件の走査は失敗 bincode (unmaintained、alice-sdf 経由) は期限付きの保留 (`scripts/advisory_holds.toml`、`scripts/advisory_hold_guard.py` が版・依存元・期限を検査、2027-01-31 まで) で、それ以外の ignore は無い
 - `conformance/g11-own.toml`: ALICE-Law G11 の表のうち、この crate 固有の行 (G2 の max / min の tie、G4 / G5 の golden、G6 の識別子、G7 / G8 の hello frame の識別子の照合、比較 0 件は `scripts/run_tests.sh` の試験) 共有の検査器の行は ALICE-Law の `conformance/g11-shared-rows.toml` から生成する
 - `tests/semantics_golden.rs`: `checker_rejects_a_wrong_digest` を追加 動いた bit の digest が記録と一致しないことを確かめる (比較を常に一致にする変異でこの試験だけが失敗する) CI と preflight の `scripts/run_tests.sh` の最小数を `semantics_golden=6` にした
 - CI: text の file の行末の検査 `scripts/check_eol.py` (試験 `scripts/test_check_eol.py`) と `.github/workflows/eol.yml` を足した `git ls-files --eol` で text の file が index か working tree で CRLF / 混在なら失敗 (`-text` と binary は除く、比べた数を出し 0 件は失敗)、workflow は ubuntu / macos / windows で走り、preflight にも同じ検査を足した (ALICE の crate で同じ中身の file)

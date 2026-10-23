@@ -1,0 +1,4 @@
+# the commit of each sibling the advisory scan resolves against (full SHA, checked out next to this repository); change only this value to move it
+ALICE-LOL 6f15cae2c948c0e4d25546d892d1392390d43c57
+ALICE-SDF 63b706ab36134c8eb1f0a9f4fca44d3903d8adab
+ALICE-Zip bf4cefa516680a42a5fe8a7dca522d6044ec20b1
