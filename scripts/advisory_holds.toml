@@ -29,5 +29,5 @@ crate = "bincode"
 version = "2.0.1"
 dependents = ["alice-sdf 7.0.0"]
 fixed = []
-expires = "2027-01-31"
+expires = "2026-11-14"
 until = "alice-sdf replaces bincode"
