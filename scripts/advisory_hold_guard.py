@@ -17,6 +17,8 @@ hold is checked against Cargo.lock:
     pre-release is fixed only when a range names a pre-release of that release) -> fail
     (the ignore would hide it)
   - expired: today is after `expires` -> fail (the upgrade is overdue)
+  - too far: `expires` is more than MAX_HOLD_DAYS (21) after today -> fail (a hold is
+    renewed with its reason when it runs out, not set far ahead)
   - lists: each held id must be ignored in deny.toml, and a held vulnerability also in
     .cargo/audit.toml (an ignore without a hold is not this guard's: the ignore lists
     carry their own reasons)
@@ -32,6 +34,9 @@ import datetime
 import pathlib
 import sys
 import tomllib
+
+# the longest a hold may run from today
+MAX_HOLD_DAYS = 21
 
 
 def parse_version(v):
@@ -109,8 +114,11 @@ def check(root, today):
     held = {(h["crate"], h["version"]) for h in holds}
     for h in holds:
         label = f"{h['id']} {h['crate']} {h['version']}"
-        if today > datetime.date.fromisoformat(h["expires"]):
+        expires = datetime.date.fromisoformat(h["expires"])
+        if today > expires:
             errors.append(f"{label}: expired on {h['expires']} ({h['until']})")
+        elif (expires - today).days > MAX_HOLD_DAYS:
+            errors.append(f"{label}: expires {h['expires']}, more than {MAX_HOLD_DAYS} days after {today}")
         if h["id"] not in deny_ids:
             errors.append(f"{label}: not ignored in deny.toml")
         if h["kind"] == "vulnerability" and h["id"] not in audit_ids:
