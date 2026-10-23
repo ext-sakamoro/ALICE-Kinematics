@@ -8,6 +8,8 @@
   - a bare dependency name (the crate's only version)  -> 0 (counted as that version)
   - expired (today is the day after `expires`)        -> 1
   - today is `expires`                                 -> 0 (the last valid day)
+  - `expires` 21 days after today                      -> 0 (the longest hold)
+  - `expires` 22 days after today                      -> 1 (a hold is renewed, not set far ahead)
   - another version in a pre-release gap of `fixed`    -> 1 (0.3.0-alpha.3 with the
     advisory's ranges ">= 0.2.0, < 0.3.0-alpha.1" / ">= 0.3.0-alpha.8")
   - another version at the pre-release bound           -> 0 (0.3.0-alpha.8)
@@ -71,7 +73,7 @@ def tree(tmp, name, packages, holds=None, deny_ids=("RUSTSEC-0000-0001",), audit
     return d
 
 
-def hold(kind="vulnerability", dependents=('"mid 1.0.0"',), fixed=('>= 0.2.0',), expires="2026-12-31"):
+def hold(kind="vulnerability", dependents=('"mid 1.0.0"',), fixed=('>= 0.2.0',), expires="2026-11-13"):
     return HOLD.format(kind=kind, dependents=", ".join(dependents),
                        fixed=", ".join(f'"{r}"' for r in fixed), expires=expires)
 
@@ -92,6 +94,8 @@ def main():
              hold(), None, None, 0, "held until"),
             ("expired", BASE, hold(expires="2026-10-22"), None, None, 1, "expired"),
             ("expires today", BASE, hold(expires="2026-10-23"), None, None, 0, "held until"),
+            ("expires in 21 days", BASE, hold(expires="2026-11-13"), None, None, 0, "held until"),
+            ("expires in 22 days", BASE, hold(expires="2026-11-14"), None, None, 1, "more than 21 days"),
             ("pre-release in the gap", BASE + [pkg("x", "1.0.0", ["leaf 0.3.0-alpha.3"]), pkg("leaf", "0.3.0-alpha.3")],
              hold(fixed=(">= 0.2.0, < 0.3.0-alpha.1", ">= 0.3.0-alpha.8")), None, None, 1, "not held and not fixed"),
             ("pre-release at the bound", BASE + [pkg("x", "1.0.0", ["leaf 0.3.0-alpha.8"]), pkg("leaf", "0.3.0-alpha.8")],
