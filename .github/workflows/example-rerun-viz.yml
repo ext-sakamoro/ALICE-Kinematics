@@ -12,13 +12,6 @@ on:
       - 'src/**'
       - 'Cargo.toml'
       - '.github/workflows/example-rerun-viz.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'examples/rerun-viz/**'
-      - 'src/**'
-      - 'Cargo.toml'
-      - '.github/workflows/example-rerun-viz.yml'
   schedule:
     # 毎週月曜 10:00 UTC = 19:00 JST
     - cron: '0 10 * * 1'
