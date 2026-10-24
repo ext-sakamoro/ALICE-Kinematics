@@ -188,7 +188,7 @@ fn decode_latent_intents(intent: &IntentNode) -> Result<IntentNode, RobotError> 
 /// # Errors
 ///
 /// `values.len() < 4` で [`RobotError::InvalidLatentDim`]
-const fn decode_latent_projection(values: &[f32]) -> Result<IntentNode, RobotError> {
+fn decode_latent_projection(values: &[f32]) -> Result<IntentNode, RobotError> {
     const MIN_DIM: usize = 4;
     if values.len() < MIN_DIM {
         return Err(RobotError::InvalidLatentDim {
@@ -197,7 +197,8 @@ const fn decode_latent_projection(values: &[f32]) -> Result<IntentNode, RobotErr
         });
     }
     let destination = Vec3::new(values[0], values[1], values[2]);
-    let speed = values[3].clamp(0.1, 2.0);
+    // ALICE-Law G2: a NaN speed is the canonical NaN (f32::clamp would keep its payload)
+    let speed = alice_det_math::metric::clamp(values[3], 0.1, 2.0);
     Ok(IntentNode::Walk { destination, speed })
 }
 

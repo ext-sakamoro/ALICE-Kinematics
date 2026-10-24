@@ -168,6 +168,10 @@ jobs:
       - name: clippy (all features, all targets)
         working-directory: ALICE-Kinematics
         run: cargo clippy --all-targets --all-features
+      # alice-lol-robot shares clippy.toml (the disallowed lists) with the root crate
+      - name: clippy (alice-lol-robot, all targets)
+        working-directory: ALICE-Kinematics
+        run: cargo clippy -p alice-lol-robot --all-targets
       # the two steps above must reach the std build: rerun each with
       # --cfg alice_lint_probe (one f32::sin at the end of src/lib.rs) and fail
       # unless clippy reports it there (0 reports = the step lints nothing

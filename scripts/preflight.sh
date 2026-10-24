@@ -41,6 +41,10 @@ step "ci.yml / clippy: clippy (all features, all targets)"
 relint
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo clippy --all-targets --all-features )
 
+step "ci.yml / clippy: clippy (alice-lol-robot, all targets)"
+relint
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo clippy -p alice-lol-robot --all-targets )
+
 step "ci.yml / clippy: clippy lint probe (checker tests)"
 python3 scripts/test_clippy_lint_probe.py
 
