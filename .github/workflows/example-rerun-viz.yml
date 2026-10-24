@@ -6,12 +6,7 @@ name: rerun-viz example
 # 全 push には掛けない (CI runner は共有資源)
 on:
   push:
-    branches: [main]
-    paths:
-      - 'examples/rerun-viz/**'
-      - 'src/**'
-      - 'Cargo.toml'
-      - '.github/workflows/example-rerun-viz.yml'
+    branches: [main, 'ci/**']
   pull_request:
     branches: [main]
     paths:
@@ -19,13 +14,45 @@ on:
       - 'src/**'
       - 'Cargo.toml'
       - '.github/workflows/example-rerun-viz.yml'
+      - '.github/paths/example-rerun-viz.txt'
   schedule:
     # 毎週月曜 10:00 UTC = 19:00 JST
     - cron: '0 10 * * 1'
   workflow_dispatch:
 
 jobs:
+  # which files changed: a new or force-pushed branch is compared with merge-base(origin/main),
+  # another push with before..after, a pull request with base...head; schedule and manual
+  # runs always run; any error runs (fail-closed) — scripts/changed_paths.py
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: decide
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after || github.sha }}
+          CREATED: ${{ github.event.created }}
+          FORCED: ${{ github.event.forced }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          python3 scripts/changed_paths.py decide --event "$EVENT"
+          --before "$BEFORE" --after "$AFTER" --created "$CREATED" --forced "$FORCED"
+          --base "$PR_BASE" --head "$PR_HEAD"
+          --patterns-file .github/paths/example-rerun-viz.txt
+
   build-example:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -41,3 +68,16 @@ jobs:
       - name: build example (pinned toolchain)
         working-directory: examples/rerun-viz
         run: cargo build --release
+
+  gate:
+    name: Gate
+    if: always()
+    needs: [changes, build-example]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: gate
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: python3 scripts/changed_paths.py gate --needs-json "$NEEDS"

@@ -1,0 +1,8 @@
+# the paths that run .github/workflows/example-rerun-viz.yml (scripts/changed_paths.py decide)
+# on.pull_request.paths of the workflow, when present, must list the same patterns in the same order
+# (scripts/changed_paths.py sync)
+examples/rerun-viz/**
+src/**
+Cargo.toml
+.github/workflows/example-rerun-viz.yml
+.github/paths/example-rerun-viz.txt
