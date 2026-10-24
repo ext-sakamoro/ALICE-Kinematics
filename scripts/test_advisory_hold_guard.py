@@ -33,6 +33,11 @@
   - `--ignore` of an id that is not held, in preflight  -> 1
   - `--ignore` of a held id whose crate left Cargo.lock -> 1
   - holds, and no ignore read anywhere                  -> 1 (the lists were not read)
+  - a quoted id (`--ignore "ID"`, `--ignore='ID'`), held -> 0 (read like an unquoted one)
+  - a quoted id that is not held                        -> 1
+  - an `--ignore` whose argument is not an id (a variable, an array, a typo, nothing) -> 1 (an
+    ignore that cannot be read is not taken for none)
+  - `--ignore-source` and other flags that only start with `--ignore` -> 0 (not an ignore of an id)
 """
 
 import datetime
@@ -151,6 +156,21 @@ def main():
             ("cli ignore of a crate gone from Cargo.lock", [pkg("app", "1.0.0", ["mid"]), pkg("mid", "1.0.0")], hold(),
              {"workflow": "run: cargo audit --ignore RUSTSEC-0000-0001\n"}, 1, "--ignore RUSTSEC-0000-0001: leaf 0.1.0 is not in Cargo.lock"),
             ("holds, no ignore read", BASE, hold(kind="unmaintained"), {"deny_ids": (), "audit_ids": ()}, 1, "0 ignores"),
+            ("quoted ids held", BASE, hold(),
+             {"workflow": "run: cargo audit --ignore \"RUSTSEC-0000-0001\" --ignore='RUSTSEC-0000-0001'\n"},
+             0, "2 cargo audit --ignore"),
+            ("quoted id not held", BASE, hold(),
+             {"workflow": "run: cargo audit --ignore \"RUSTSEC-0000-0009\"\n"}, 1, "RUSTSEC-0000-0009"),
+            ("ignore of a variable", BASE, hold(),
+             {"workflow": "run: cargo audit --ignore \"${ID}\"\n"}, 1, "cannot be read"),
+            ("ignore of an array", BASE, hold(),
+             {"preflight": "cargo audit \"${IGNORES[@]}\" --ignore $X\n"}, 1, "cannot be read"),
+            ("ignore of a typo", BASE, hold(),
+             {"workflow": "run: cargo audit --ignore RUSTSEC-2026-35\n"}, 1, "cannot be read"),
+            ("ignore with nothing after it", BASE, hold(),
+             {"workflow": "run: cargo audit --ignore\n"}, 1, "cannot be read"),
+            ("other flags that start with --ignore", BASE, hold(),
+             {"workflow": "run: cargo audit --ignore-source --ignore-yanked\n"}, 0, "0 cargo audit --ignore"),
         ]
         cases += [(n, p, h, None, None, w, word, kw) for n, p, h, kw, w, word in more]
         for i, case in enumerate(cases):
