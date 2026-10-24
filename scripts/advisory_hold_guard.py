@@ -22,6 +22,12 @@ hold is checked against Cargo.lock:
   - lists: each held id must be ignored in deny.toml, and a held vulnerability also in
     .cargo/audit.toml (an ignore without a hold is not this guard's: the ignore lists
     carry their own reasons)
+  - unused ignores: deny.toml's [advisories] must set `unused-ignored-advisory = "deny"`,
+    so cargo deny fails on an ignore that no longer matches anything in the graph
+  - command-line ignores: every `--ignore <id>` (or `--ignore=<id>`) in the workflows and
+    scripts/preflight.sh must be held, and its held crate version must be in Cargo.lock
+  - read nothing: with holds, the ignore lists and command lines together must give at
+    least one ignore (otherwise they were not read)
 
 It fails when it could not compare anything (no Cargo.lock, no packages, no holds),
 so it never passes vacuously.
@@ -32,6 +38,7 @@ so it never passes vacuously.
 import argparse
 import datetime
 import pathlib
+import re
 import sys
 import tomllib
 
@@ -78,6 +85,21 @@ def ignored_ids(table):
     return out
 
 
+CLI_IGNORE = re.compile(r"--ignore(?:=|\s+)(RUSTSEC-\d{4}-\d{4,})")
+
+
+def cli_ignores(root):
+    """(file relative to root, advisory id) for each `--ignore` in the workflows and preflight"""
+    files = sorted((root / ".github" / "workflows").glob("*.y*ml"))
+    files.append(root / "scripts" / "preflight.sh")
+    out = []
+    for f in files:
+        if f.is_file():
+            for m in CLI_IGNORE.finditer(f.read_text(encoding="utf-8")):
+                out.append((f.relative_to(root).as_posix(), m.group(1)))
+    return out
+
+
 def dependents_of(packages, name, version):
     versions = [p["version"] for p in packages if p["name"] == name]
     found = set()
@@ -107,11 +129,24 @@ def check(root, today):
         return 2, ["advisory_holds.toml holds nothing (nothing to compare)"]
     deny = root / "deny.toml"
     audit = root / ".cargo" / "audit.toml"
-    deny_ids = ignored_ids(tomllib.loads(deny.read_text(encoding="utf-8"))) if deny.is_file() else set()
+    deny_table = tomllib.loads(deny.read_text(encoding="utf-8")) if deny.is_file() else {}
+    deny_ids = ignored_ids(deny_table)
     audit_ids = ignored_ids(tomllib.loads(audit.read_text(encoding="utf-8"))) if audit.is_file() else set()
 
     errors, notes = [], []
     held = {(h["crate"], h["version"]) for h in holds}
+    if (deny_table.get("advisories") or {}).get("unused-ignored-advisory") != "deny":
+        errors.append('deny.toml [advisories] does not set unused-ignored-advisory = "deny"')
+    cli = cli_ignores(root)
+    by_id = {h["id"]: h for h in holds}
+    for where, aid in cli:
+        h = by_id.get(aid)
+        if h is None:
+            errors.append(f"{where}: cargo audit --ignore {aid} is not held in advisory_holds.toml")
+        elif not any(p["name"] == h["crate"] and p["version"] == h["version"] for p in packages):
+            errors.append(f"{where}: --ignore {aid}: {h['crate']} {h['version']} is not in Cargo.lock")
+    if not (deny_ids or audit_ids or cli):
+        errors.append(f"{len(holds)} holds, but 0 ignores read from deny.toml, .cargo/audit.toml and the command lines")
     for h in holds:
         label = f"{h['id']} {h['crate']} {h['version']}"
         expires = datetime.date.fromisoformat(h["expires"])
@@ -140,7 +175,9 @@ def check(root, today):
                 errors.append(f"{crate} {p['version']}: in Cargo.lock, not held and not fixed: the ignore would hide it")
     if errors:
         return 1, errors
-    return 0, notes + [f"{len(holds)} holds compared against {len(packages)} packages"]
+    return 0, notes + [
+        f"{len(holds)} holds compared against {len(packages)} packages, {len(cli)} cargo audit --ignore"
+    ]
 
 
 def main(argv):
