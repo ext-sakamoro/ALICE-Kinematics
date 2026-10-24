@@ -111,7 +111,7 @@ impl<'a> IntentExecutor<'a> {
     /// # 前処理 (Phase G.1、Garrido latent extension)
     ///
     /// [`IntentNode::LatentIntent`] は [`intent_to_kinematics`] 呼び出し前に
-    /// [`decode_latent_intents`] で discrete verb ([`IntentNode::Walk`]) に変換される
+    /// `decode_latent_intents` で discrete verb ([`IntentNode::Walk`]) に変換される
     ///
     /// [`intent_to_kinematics`]: alice_kinematics::lol_bridge::intent_to_kinematics
     #[allow(clippy::unused_self)]

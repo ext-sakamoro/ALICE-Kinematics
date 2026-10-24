@@ -32,13 +32,13 @@ use crate::error::RobotError;
 pub struct SafetyLaw {
     /// 最大線速度 [m/s] (ISO 10218-1: 手動誘導時 0.25 m/s、collab robot 1.5 m/s 前後)
     pub max_linear_velocity: f32,
-    /// 最大回転角 step [rad] (1 step Intent 内での回転量、π/2 = 90° を default)
+    /// 最大回転角 step \[rad\] (1 step Intent 内での回転量、π/2 = 90° を default)
     pub max_angular_step: f32,
-    /// workspace AABB min [m]、範囲外 target は `OutOfWorkspace`
+    /// workspace AABB min \[m\]、範囲外 target は `OutOfWorkspace`
     pub workspace_min: Vec3,
     /// workspace AABB max
     pub workspace_max: Vec3,
-    /// 最大 verb 印加力 [N] (`Grasp` / `Push` / `Pull` / `Throw`)
+    /// 最大 verb 印加力 \[N\] (`Grasp` / `Push` / `Pull` / `Throw`)
     pub max_force: f32,
     /// `LatentIntent` の L2 norm 上限 (Garrido arXiv 2601.05230 "constrained" 由来、Phase G.1)
     ///

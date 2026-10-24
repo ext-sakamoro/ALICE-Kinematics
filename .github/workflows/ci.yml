@@ -253,7 +253,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo doc
         working-directory: ALICE-Kinematics
-        run: cargo doc --no-deps
+        run: cargo doc --no-deps --workspace
         env:
           RUSTDOCFLAGS: "-Dwarnings"
 

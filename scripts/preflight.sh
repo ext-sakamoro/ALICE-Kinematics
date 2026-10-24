@@ -79,7 +79,7 @@ step "ci.yml / fmt: run"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; cargo fmt -- --check )
 
 step "ci.yml / doc: cargo doc"
-( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings" RUSTDOCFLAGS="-Dwarnings"; cargo doc --no-deps )
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings" RUSTDOCFLAGS="-Dwarnings"; cargo doc --no-deps --workspace )
 
 step "ci.yml / actionlint: actionlint"
 actionlint .github/workflows/*.yml

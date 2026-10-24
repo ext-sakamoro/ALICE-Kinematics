@@ -27,6 +27,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 - CI: 公開する文面の検査 (`Public text` workflow、`scripts/public_text.sh`) を追加 ALICE-Law の `scripts/public_text_check.py` を `.github/public-text-pin` の revision (779fa44) で取得し、SHA-256 が一致した時だけ使って、HEAD の全 tracked file (path と本文) と送った commit (message・追加行・追加 path) を読む 何も比較できなければ失敗する preflight でも走る
 
 ### Changed
+- CI の doc job は workspace 全体 (`cargo doc --no-deps --workspace`、alice-lol-robot を含む) を `-Dwarnings` で build する alice-lol-robot の doc comment の単位 (`[rad]` / `[m]` / `[N]`) を link にしないように書き、非公開の関数への link を外した
 - feature `lol` の alice-lol を path をやめて git の rev (ALICE-LOL 41268d9) で取る CI は ALICE-LOL / ALICE-Zip / ALICE-SDF を clone しない (security-audit の sibling の checkout と `.github/alice-siblings` も外した) `deny.toml` の `allow-git` に ALICE-LOL / ALICE-SDF / ALICE-Zip を足した
 - CI: security-audit の変更検出は変更した file の一覧を pipe でなく here-string で `grep -q` に渡す (pipefail の下で grep が先に終わると printf が SIGPIPE で失敗し、一致があっても依存の検査を飛ばしていた)
 - CI: `scripts/advisory_hold_guard.py` は deny.toml の `[advisories]` に `unused-ignored-advisory = "deny"` が無ければ失敗し、workflow と `scripts/preflight.sh` の `cargo audit` の command (`\` で続く行は 1 つの command、comment 行と他の tool の `--ignore` は読まない) の `--ignore <id>` がすべて保留 (`scripts/advisory_holds.toml`) にあり、その crate の版が Cargo.lock にあることを検査する id は引用符の中でも読み、id として読めない `--ignore` の引数 (変数、配列、綴りの誤り、引数なし) は失敗にする 保留があるのに ignore を 1 件も読めなければ失敗 deny.toml に `unused-ignored-advisory = "deny"` を足した
