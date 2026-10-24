@@ -1,9 +1,9 @@
 name: Security audit
 
 # RustSec advisories (cargo audit) and licence / advisory / ban / source policy (cargo deny),
-# on a fresh resolve against the real siblings pinned in .github/alice-siblings (never stubs),
-# so an advisory against any crate in the graph, one that comes in through a sibling included,
-# turns this red without a change here.
+# on a fresh resolve of the real graph (every ALICE-* dependency is taken by git at a pinned rev),
+# so an advisory against any crate in the graph, one that comes in through an ALICE-* crate
+# included, turns this red without a change here.
 
 on:
   # every event is looked at; the `changes` job decides whether the scans run (a path filter
@@ -63,8 +63,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - name: Check out the pinned ALICE-* siblings
-        uses: ./.github/actions/alice-siblings
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
       # fresh resolve (no Cargo.lock is committed); the guard (its tests first) checks that the
@@ -92,8 +90,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - name: Check out the pinned ALICE-* siblings
-        uses: ./.github/actions/alice-siblings
       - name: Install cargo-deny
         run: cargo install --locked cargo-deny
       # fresh resolve; the dated holds stay exact (the hold guard), and cargo deny's crate graph

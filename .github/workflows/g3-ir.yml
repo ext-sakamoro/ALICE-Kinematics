@@ -96,19 +96,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
-      # the lol feature's path dependency (alice-lol) and its own path dependencies
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-LOL
-          path: ALICE-LOL
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-Zip
-          path: ALICE-Zip
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-SDF
-          path: ALICE-SDF
       # the toolchain is rust-toolchain.toml's (the IR text depends on the LLVM version);
       # both targets are installed for the probe tests, which build for each architecture
       - name: Targets for the pinned toolchain

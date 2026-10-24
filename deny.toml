@@ -56,4 +56,9 @@ highlight = "all"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# ALICE-* crates taken by git at a pinned rev (alice-lol; alice-sdf and alice-zip through it)
+allow-git = [
+    "https://github.com/ext-sakamoro/ALICE-LOL",
+    "https://github.com/ext-sakamoro/ALICE-SDF",
+    "https://github.com/ext-sakamoro/ALICE-Zip",
+]

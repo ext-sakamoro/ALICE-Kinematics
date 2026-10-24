@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `alice-lol-robot` crate (ALICE-LOL から移した、crate 名と API は同じ) を workspace の member にした 試験 (lib と `tests/analytic_robot_law.rs`) を CI の test と release の job で走らせる
 - CI: `security-audit` workflow: cargo audit と cargo deny (`deny.toml` を追加) を、`.github/alice-siblings` に固定した実物の sibling (ALICE-LOL / ALICE-SDF / ALICE-Zip) と毎回新しい解決で走らせる (依存や設定の変更時、週次 水曜 04:23 UTC、手動) 解決と cargo deny の graph がこの crate と path の sibling を含むことを `scripts/sibling_coverage_guard.py` (試験付き) で確かめ、0 件の走査は失敗 bincode (unmaintained、alice-sdf 経由) は期限付きの保留 (`scripts/advisory_holds.toml`、`scripts/advisory_hold_guard.py` が版・依存元・期限を検査、2026-11-14 まで) で、それ以外の ignore は無い 保留は今日から 21 日以内に限る (guard が検査、延長は理由とともに日付を更新)
 - `conformance/g11-own.toml`: ALICE-Law G11 の表のうち、この crate 固有の行 (G2 の max / min の tie、G4 / G5 の golden、G6 の識別子、G7 / G8 の hello frame の識別子の照合、比較 0 件は `scripts/run_tests.sh` の試験) 共有の検査器の行は ALICE-Law の `conformance/g11-shared-rows.toml` から生成する
 - `tests/semantics_golden.rs`: `checker_rejects_a_wrong_digest` を追加 動いた bit の digest が記録と一致しないことを確かめる (比較を常に一致にする変異でこの試験だけが失敗する) CI と preflight の `scripts/run_tests.sh` の最小数を `semantics_golden=6` にした
@@ -26,6 +27,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 - CI: 公開する文面の検査 (`Public text` workflow、`scripts/public_text.sh`) を追加 ALICE-Law の `scripts/public_text_check.py` を `.github/public-text-pin` の revision (779fa44) で取得し、SHA-256 が一致した時だけ使って、HEAD の全 tracked file (path と本文) と送った commit (message・追加行・追加 path) を読む 何も比較できなければ失敗する preflight でも走る
 
 ### Changed
+- feature `lol` の alice-lol を path をやめて git の rev (ALICE-LOL 41268d9) で取る CI は ALICE-LOL / ALICE-Zip / ALICE-SDF を clone しない (security-audit の sibling の checkout と `.github/alice-siblings` も外した) `deny.toml` の `allow-git` に ALICE-LOL / ALICE-SDF / ALICE-Zip を足した
 - CI: security-audit の変更検出は変更した file の一覧を pipe でなく here-string で `grep -q` に渡す (pipefail の下で grep が先に終わると printf が SIGPIPE で失敗し、一致があっても依存の検査を飛ばしていた)
 - CI: `scripts/advisory_hold_guard.py` は deny.toml の `[advisories]` に `unused-ignored-advisory = "deny"` が無ければ失敗し、workflow と `scripts/preflight.sh` の `cargo audit` の command (`\` で続く行は 1 つの command、comment 行と他の tool の `--ignore` は読まない) の `--ignore <id>` がすべて保留 (`scripts/advisory_holds.toml`) にあり、その crate の版が Cargo.lock にあることを検査する id は引用符の中でも読み、id として読めない `--ignore` の引数 (変数、配列、綴りの誤り、引数なし) は失敗にする 保留があるのに ignore を 1 件も読めなければ失敗 deny.toml に `unused-ignored-advisory = "deny"` を足した
 - Licence: `MIT OR Apache-2.0` (feature `encoder` の module は `AGPL-3.0`) → `LicenseRef-Proprietary`

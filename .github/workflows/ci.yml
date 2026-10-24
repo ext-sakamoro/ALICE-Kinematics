@@ -28,23 +28,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      # B.3 Milestone (2026-08-06): lol feature の optional path dep 対応
-      # alice-lol と alice-sdf (alice-lol の transitive dep) を sibling checkout
       - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-LOL
-          path: ALICE-LOL
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-Zip
-          path: ALICE-Zip
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-SDF
-          path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (default, with the Law tests counted)
         working-directory: ALICE-Kinematics
@@ -55,6 +41,9 @@ jobs:
       - name: cargo test (lol bridge)
         working-directory: ALICE-Kinematics
         run: scripts/run_tests.sh nan_boundaries=51 -- cargo test --lib --tests --features lol
+      - name: cargo test (alice-lol-robot, with its analytic law tests counted)
+        working-directory: ALICE-Kinematics
+        run: scripts/run_tests.sh analytic_robot_law=29 -- cargo test -p alice-lol-robot --all-targets
       - name: library has no rerun dependency (all features)
         working-directory: ALICE-Kinematics
         run: |
@@ -80,18 +69,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-LOL
-          path: ALICE-LOL
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-Zip
-          path: ALICE-Zip
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-SDF
-          path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test --release (default, with the Law tests counted)
         working-directory: ALICE-Kinematics
@@ -102,6 +79,9 @@ jobs:
       - name: cargo test --release (lol bridge)
         working-directory: ALICE-Kinematics
         run: scripts/run_tests.sh nan_boundaries=51 -- cargo test --release --lib --tests --features lol
+      - name: cargo test --release (alice-lol-robot, with its analytic law tests counted)
+        working-directory: ALICE-Kinematics
+        run: scripts/run_tests.sh analytic_robot_law=29 -- cargo test --release -p alice-lol-robot --all-targets
 
   float-environment:
     # ALICE-Law G14 on each OS: round-to-nearest-even and no flush-to-zero at run
@@ -124,18 +104,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-LOL
-          path: ALICE-LOL
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-Zip
-          path: ALICE-Zip
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-SDF
-          path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
       - name: Float environment (debug and release)
         run: |
@@ -183,18 +151,6 @@ jobs:
           path: ALICE-Kinematics
           # the release tags: scripts/id_move_check.py compares with the newest one
           fetch-depth: 0
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-LOL
-          path: ALICE-LOL
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-Zip
-          path: ALICE-Zip
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-SDF
-          path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -294,18 +250,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: ALICE-Kinematics
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-LOL
-          path: ALICE-LOL
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-Zip
-          path: ALICE-Zip
-      - uses: actions/checkout@v5
-        with:
-          repository: ext-sakamoro/ALICE-SDF
-          path: ALICE-SDF
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo doc
         working-directory: ALICE-Kinematics

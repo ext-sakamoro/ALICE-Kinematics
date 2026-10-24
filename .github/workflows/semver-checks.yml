@@ -13,8 +13,7 @@ name: Semver checks
 # file the job executes or reads), and weekly (a release on crates.io can change the
 # baseline without a commit here).
 #
-# The lol feature path-depends on ALICE-LOL (and through it on ALICE-SDF and ALICE-Zip), so
-# the siblings are checked out beside the repository as in ci.yml
+# The lol feature takes alice-lol by git at a pinned rev (Cargo.toml), so no sibling is checked out
 #
 # scripts/preflight.sh (full run) runs the same command.
 
@@ -71,25 +70,9 @@ jobs:
       run:
         working-directory: ALICE-Kinematics
     steps:
-      # the siblings the lol feature path-depends on, the layout of ci.yml
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           path: ALICE-Kinematics
-          persist-credentials: false
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          repository: ext-sakamoro/ALICE-LOL
-          path: ALICE-LOL
-          persist-credentials: false
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          repository: ext-sakamoro/ALICE-Zip
-          path: ALICE-Zip
-          persist-credentials: false
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          repository: ext-sakamoro/ALICE-SDF
-          path: ALICE-SDF
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable (branch, default toolchain stable)
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2

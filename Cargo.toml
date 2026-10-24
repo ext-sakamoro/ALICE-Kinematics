@@ -35,8 +35,12 @@ lol = ["dep:alice-lol", "std"]
 [dependencies]
 # Law helpers: max / min / clamp with a defined zero sign and NaN result (ALICE-Law G2)
 alice-det-math = { version = "0.5.1", default-features = false }
-# B.3 Milestone: LOL DSL bridge (optional path dep)
-alice-lol = { path = "../ALICE-LOL/alice-lol", version = ">=0.4.1, <0.6", optional = true, default-features = false }
+# B.3 Milestone: LOL DSL bridge (optional), by git at a full commit
+alice-lol = { git = "https://github.com/ext-sakamoro/ALICE-LOL", rev = "41268d9097095d5765480b12b10902822a41755f", version = ">=0.4.1, <0.6", optional = true, default-features = false }
+
+[workspace]
+# alice-lol-robot: LOL の intent → humanoid FK + 8-byte packet の template (alice-kinematics と alice-lol に依存する)
+members = [".", "alice-lol-robot"]
 
 [dev-dependencies]
 # SHA-256 of the recorded-bit scenarios (tests/semantics_golden.rs) and of the
