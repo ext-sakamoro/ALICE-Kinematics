@@ -6,7 +6,7 @@
 name = "alice-kinematics-rerun-viz"
 version = "0.0.0"
 edition = "2021"
-authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
+authors = ["Moroya Sakamoto"]
 description = "Dev visualization example for alice-kinematics autorig (rerun viewer, not published)"
 license = "LicenseRef-Proprietary"
 publish = false

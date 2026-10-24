@@ -2,7 +2,7 @@
 name = "alice-kinematics"
 version = "0.3.0"
 edition = "2021"
-authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
+authors = ["Moroya Sakamoto"]
 description = "Human motion intent compression — 1000Hz raw coordinates → 8-byte kinematic intent"
 license = "LicenseRef-Proprietary"
 publish = false

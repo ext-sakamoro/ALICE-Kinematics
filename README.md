@@ -154,12 +154,9 @@ Readers before 0.3.0 cannot detect a hello (every 8-byte string decodes to some 
 
 ## License
 
-`LicenseRef-Proprietary` from this version: the source is published for reading only, and
-using, copying, modifying or distributing it needs a written agreement with
-the copyright holder. The text is [LICENSE-Proprietary](LICENSE-Proprietary). Versions
-published before keep the licence they were published under.
+`LicenseRef-Proprietary`. The text is [LICENSE-Proprietary](LICENSE-Proprietary).
 
-Licence enquiries: <contact@extoria.co.jp>
+Enquiries: https://extoria.co.jp/
 
 ## Author
 
