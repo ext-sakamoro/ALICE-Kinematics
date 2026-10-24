@@ -398,6 +398,28 @@ mod tests {
     }
 
     #[test]
+    fn latent_speed_nan_becomes_the_canonical_nan() {
+        // ALICE-Law G2: a NaN speed (any payload or sign) is the canonical NaN 0x7fc0_0000, never the
+        // incoming payload, so two hosts that decode the same latent vector agree bit for bit
+        for bits in [0x7fc0_1234_u32, 0xffc0_0000, 0x7f80_0001] {
+            let node = decode_latent_projection(&[0.0, 0.0, 0.0, f32::from_bits(bits)]).unwrap();
+            let IntentNode::Walk { speed, .. } = node else {
+                panic!("a latent projection decodes to Walk");
+            };
+            assert_eq!(speed.to_bits(), 0x7fc0_0000, "input {bits:#x}");
+        }
+        // the bounds themselves are unchanged
+        for (x, want) in [(0.0_f32, 0.1_f32), (1.0, 1.0), (100.0, 2.0), (-0.0, 0.1)] {
+            let IntentNode::Walk { speed, .. } =
+                decode_latent_projection(&[0.0, 0.0, 0.0, x]).unwrap()
+            else {
+                panic!("a latent projection decodes to Walk");
+            };
+            assert_eq!(speed.to_bits(), want.to_bits(), "input {x}");
+        }
+    }
+
+    #[test]
     fn translate_latent_speed_clamped_to_max() {
         // values[3] = 100.0 でも Walk::speed は clamp(0.1, 2.0) で 2.0 上限
         let program = ProgramBuilder::new()
