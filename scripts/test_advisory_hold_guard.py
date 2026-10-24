@@ -38,6 +38,8 @@
   - an `--ignore` whose argument is not an id (a variable, an array, a typo, nothing) -> 1 (an
     ignore that cannot be read is not taken for none)
   - `--ignore-source` and other flags that only start with `--ignore` -> 0 (not an ignore of an id)
+  - `--ignore` of another tool (pytest, ruff) or in a comment line -> 0 (only cargo audit's count)
+  - a cargo audit continued over lines with `\`, the id on the next line: held -> 0, not held -> 1
 """
 
 import datetime
@@ -171,6 +173,17 @@ def main():
              {"workflow": "run: cargo audit --ignore\n"}, 1, "cannot be read"),
             ("other flags that start with --ignore", BASE, hold(),
              {"workflow": "run: cargo audit --ignore-source --ignore-yanked\n"}, 0, "0 cargo audit --ignore"),
+            ("another tool's --ignore", BASE, hold(),
+             {"workflow": "run: pytest --ignore=tests/slow\n      - run: ruff check --ignore E501 .\n",
+              "preflight": "python3 -m pytest --ignore tests/slow\n"}, 0, "0 cargo audit --ignore"),
+            ("--ignore in a comment line", BASE, hold(),
+             {"workflow": "      # cargo audit --ignore RUSTSEC-0000-0009 was the old form\n",
+              "preflight": "  # --ignore $X\n"}, 0, "0 cargo audit --ignore"),
+            ("continued cargo audit, held id on the next line", BASE, hold(),
+             {"workflow": "        run: |\n          cargo audit --deny yanked \\\n            --ignore RUSTSEC-0000-0001\n"},
+             0, "1 cargo audit --ignore"),
+            ("continued cargo audit, unheld id on the next line", BASE, hold(),
+             {"preflight": "cargo audit \\\n  --ignore=\"RUSTSEC-0000-0009\"\n"}, 1, "RUSTSEC-0000-0009"),
         ]
         cases += [(n, p, h, None, None, w, word, kw) for n, p, h, kw, w, word in more]
         for i, case in enumerate(cases):
