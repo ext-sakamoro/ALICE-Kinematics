@@ -2,14 +2,13 @@
 //!
 //! Receives an Intent packet and reconstructs a smooth, biomechanically
 //! plausible trajectory using quintic polynomial interpolation.
-//! This is the "free decoder" — MIT licensed.
 //!
 //! The quintic polynomial x(t) = a₀ + a₁t + a₂t² + a₃t³ + a₄t⁴ + a₅t⁵
 //! is the analytical solution to jerk minimization with boundary conditions:
 //! - Start: position, velocity, acceleration (from previous state)
 //! - End: target position, zero velocity, zero acceleration
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::intent::Intent;

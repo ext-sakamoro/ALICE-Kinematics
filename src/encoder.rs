@@ -4,7 +4,7 @@
 //! motion onset, fits minimum-jerk trajectory, and emits
 //! compact Intent packets.
 //!
-//! License: AGPL-3.0 (encoder module)
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::intent::{Intent, IntentFlags, IntentType};

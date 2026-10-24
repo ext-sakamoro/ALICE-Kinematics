@@ -39,7 +39,7 @@
 //! let _result = auto_rig_on_sphere(&mesh, &ctx, &AutoRigConfig::default());
 //! ```
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use super::{auto_rig, AutoRigConfig, AutoRigError, AutoRigResult, MeshView};

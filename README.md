@@ -27,21 +27,21 @@ Instead of streaming coordinates, ALICE-Kinematics:
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │  VR/Mouse   │────▶│   Encoder   │────▶│   Network   │────▶│  Predictor  │
 │  1000Hz raw │     │ Jerk-min fit│     │  8-16 bytes │     │ Trajectory  │
-│  (112 KB/s) │     │  (AGPL-3.0) │     │  per intent │     │ Reconstruct │
+│  (112 KB/s) │     │  (encoder)  │     │  per intent │     │ Reconstruct │
 └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
                     Intent extraction                        Full-frame
-                    Biomechanical model                      interpolation (MIT)
+                    Biomechanical model                      interpolation
 ```
 
 ## Architecture
 
-### MIT Licensed (Decoder / Format)
+### Decoder / Format
 
 - **`joint`** — 7-DoF joint chain, rotation constraints, FK/IK
 - **`intent`** — Compact intent packet format (8-16 bytes)
 - **`predictor`** — Trajectory reconstruction from intent (dead reckoning, interpolation)
 
-### AGPL-3.0 Licensed (Encoder, feature `encoder`)
+### Encoder (feature `encoder`)
 
 - **`jerk`** — Flash-Hogan jerk minimization, quintic polynomial fitting
 - **`encoder`** — Raw sensor → Intent extraction pipeline
@@ -69,7 +69,7 @@ let intents = intent_to_kinematics(&lol_intent, &positions).unwrap();
 ```rust
 use alice_kinematics::{Intent, ArmChain, Predictor};
 
-// Receiver side (MIT) — reconstruct trajectory from intent
+// Receiver side — reconstruct trajectory from intent
 let intent = Intent::decode(&packet_bytes);
 let mut predictor = Predictor::new();
 predictor.apply_intent(intent);
@@ -79,7 +79,7 @@ let pos = predictor.position_at(0.016); // 16ms into the motion
 ```
 
 ```rust
-// Encoder side (AGPL-3.0) — requires feature "encoder"
+// Encoder side — requires feature "encoder"
 use alice_kinematics::encoder::{IntentEncoder, SensorSample};
 
 let mut encoder = IntentEncoder::new();
@@ -154,10 +154,12 @@ Readers before 0.3.0 cannot detect a hello (every 8-byte string decodes to some 
 
 ## License
 
-- **Core / Decoder**: MIT — joint model, intent format, predictor
-- **Encoder** (feature `encoder`): AGPL-3.0 — jerk minimization, sensor → intent extraction
+`LicenseRef-Proprietary` from this version: the source is published for reading only, and
+using, copying, modifying or distributing it needs a written agreement with
+the copyright holder. The text is [LICENSE-Proprietary](LICENSE-Proprietary). Versions
+published before keep the licence they were published under.
 
-See [LICENSE](LICENSE) and [LICENSE-AGPL](LICENSE-AGPL).
+Licence enquiries: <contact@extoria.co.jp>
 
 ## Author
 

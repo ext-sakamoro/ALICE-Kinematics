@@ -5,7 +5,7 @@
 //! 幾何ヒューリスティック骨格推定 (dotneet/image-to-3d §E.1 平面世界向け)
 //! の基盤となる断面分割を提供する
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::joint::Vec3k;

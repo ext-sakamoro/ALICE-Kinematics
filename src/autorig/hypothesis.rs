@@ -12,7 +12,7 @@
 //! 検出されなかった関節は `None` として保持され、`to_skeleton` で default
 //! bone_length (親から短い bone) で補完される
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::joint::Vec3k;

@@ -34,7 +34,7 @@
 //! assert!(result.skeleton.is_none());  // aspect ratio 1.0 → not humanoid
 //! ```
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 // Pedantic warning 抑制 (2026-08-06 追加、autorig module 特有事情):

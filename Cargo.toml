@@ -4,7 +4,8 @@ version = "0.3.0"
 edition = "2021"
 authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
 description = "Human motion intent compression — 1000Hz raw coordinates → 8-byte kinematic intent"
-license = "MIT OR Apache-2.0"
+license = "LicenseRef-Proprietary"
+publish = false
 repository = "https://github.com/ext-sakamoro/ALICE-Kinematics"
 keywords = ["kinematics", "motion-capture", "compression", "no_std", "vr"]
 categories = ["no-std", "compression", "game-development"]
@@ -14,18 +15,15 @@ include = [
     "src/**",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE-APACHE",
-    "LICENSE-MIT",
-    "LICENSING.md",
+    "LICENSE-Proprietary",
     "TRADEMARK_NOTICE",
 ]
 
 [features]
 default = []
 std = []
-# AGPL-3.0 licensed encoder modules
-# Activating this feature includes code licensed under AGPL-3.0.
-# See LICENSE-AGPL for details.
+# Encoder modules (jerk minimization, sensor -> intent extraction); the same
+# licence as the rest of the crate (LicenseRef-Proprietary, see LICENSE-Proprietary)
 encoder = []
 
 # `lol` — Milestone B.3 (2026-08-06): ALICE-LOL DSL bridge

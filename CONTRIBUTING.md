@@ -39,6 +39,6 @@ cargo doc --no-deps 2>&1 | grep warning
 
 - **8-byte intent encoding**: 1000Hz raw coordinates → compact kinematic intent packets.
 - **Quintic polynomial prediction**: minimum-jerk trajectory reconstruction from boundary conditions.
-- **Dual-license**: MIT core (joint, intent, predictor); AGPL-3.0 encoder modules (feature-gated).
+- **Licence**: the whole crate, including the `encoder` feature modules, is LicenseRef-Proprietary (see LICENSE-Proprietary).
 - **`no_std` + `alloc`**: runs on embedded and bare-metal targets without `std`.
 - **Zero external dependencies**: all math and kinematics are self-contained.

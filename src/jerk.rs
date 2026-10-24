@@ -6,7 +6,7 @@
 //! Flash & Hogan (1985): "The Coordination of Arm Movements:
 //! An Experimentally Confirmed Mathematical Model"
 //!
-//! License: AGPL-3.0 (encoder module)
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::joint::Vec3k;

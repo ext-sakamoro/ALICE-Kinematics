@@ -3,7 +3,7 @@
 //! Models shoulder (3-DoF), elbow (1-DoF), wrist (3-DoF) with
 //! anatomical rotation constraints. Forward/Inverse kinematics.
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::nan::{canon, canon3};

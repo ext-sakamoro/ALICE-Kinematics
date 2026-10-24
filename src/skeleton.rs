@@ -3,7 +3,7 @@
 //! 全身骨格の階層構造と FK 伝播。
 //! VR/モーションキャプチャ向けの標準的な関節配置。
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::joint::Vec3k;

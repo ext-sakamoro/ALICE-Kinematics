@@ -10,7 +10,7 @@
 //! - duration: u8 (milliseconds, 0-255)
 //! - flags: u8 (joint mask, grip state, intent type)
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::joint::Vec3k;

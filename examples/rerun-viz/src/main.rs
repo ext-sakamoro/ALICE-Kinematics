@@ -17,7 +17,7 @@
 //! auto-rig を実装後、debug 目的で rerun (Apache-2/MIT) を可視化に使う
 //! 公開ライブラリ alice-kinematics の feature には含めず、本 dev 専用 crate で単独 build する
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use alice_kinematics::autorig::{auto_rig, AutoRigConfig, MeshView};

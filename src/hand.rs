@@ -4,7 +4,7 @@
 //! 各指に MCP/PIP/DIP/TIP の関節を持ち、
 //! 解剖学的制約に基づく屈曲/伸展を実装。
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use crate::joint::{Joint, JointConstraint, Vec3k};

@@ -8,7 +8,7 @@ version = "0.0.0"
 edition = "2021"
 authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
 description = "Dev visualization example for alice-kinematics autorig (rerun viewer, not published)"
-license = "MIT OR Apache-2.0"
+license = "LicenseRef-Proprietary"
 publish = false
 
 [workspace]

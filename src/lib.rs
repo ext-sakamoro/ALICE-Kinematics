@@ -1,8 +1,8 @@
 //! ALICE-Kinematics — Human motion intent compression
 //!
 //! Replaces 1000Hz raw coordinate streaming with 8-byte kinematic intents.
-//! Decoder/predictor (MIT) reconstructs full trajectories from intents.
-//! Encoder (AGPL-3.0, feature `encoder`) extracts intents from raw sensor data.
+//! Decoder/predictor reconstructs full trajectories from intents.
+//! Encoder (feature `encoder`) extracts intents from raw sensor data.
 //!
 //! # Quick Start
 //!

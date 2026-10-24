@@ -12,7 +12,7 @@
 //! Rust ネイティブ環境では実装保留、Blender を使わない前提ならこの距離ベースが
 //! 実質デフォルト (memory §E.3 「実測でほぼ (c) 距離ベース」)
 //!
-//! License: MIT
+//! License: LicenseRef-Proprietary
 //! Author: Moroya Sakamoto
 
 use super::slice::MeshView;

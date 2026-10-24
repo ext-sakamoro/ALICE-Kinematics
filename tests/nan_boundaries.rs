@@ -599,7 +599,7 @@ fn boundary_tangentframe_from_context() {
     assert_canonical("from_context", &out);
 }
 
-// ---- encoder (AGPL feature) ----------------------------------------------------------------
+// ---- encoder (feature `encoder`) ------------------------------------------------------------
 
 #[cfg(feature = "encoder")]
 mod encoder {
