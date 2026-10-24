@@ -24,8 +24,10 @@ hold is checked against Cargo.lock:
     carry their own reasons)
   - unused ignores: deny.toml's [advisories] must set `unused-ignored-advisory = "deny"`,
     so cargo deny fails on an ignore that no longer matches anything in the graph
-  - command-line ignores: every `--ignore <id>` (or `--ignore=<id>`) in the workflows and
-    scripts/preflight.sh must be held, and its held crate version must be in Cargo.lock
+  - command-line ignores: every `--ignore <id>` (or `--ignore=<id>`, the id bare or in quotes) in the
+    workflows and scripts/preflight.sh must be held, and its held crate version must be in Cargo.lock;
+    an `--ignore` whose argument is not an advisory id (a variable, an array, a typo, nothing) fails,
+    since an ignore that cannot be read must not count as none
   - read nothing: with holds, the ignore lists and command lines together must give at
     least one ignore (otherwise they were not read)
 
@@ -85,18 +87,25 @@ def ignored_ids(table):
     return out
 
 
-CLI_IGNORE = re.compile(r"--ignore(?:=|\s+)(RUSTSEC-\d{4}-\d{4,})")
+# `--ignore` as a whole flag (not `--ignore-source` and the like), then its argument up to the next blank
+CLI_IGNORE = re.compile(r"--ignore(?![\w-])(?:=|[ \t]+)?(\S*)")
+ADVISORY_ID = re.compile(r"RUSTSEC-\d{4}-\d{4,}")
 
 
 def cli_ignores(root):
-    """(file relative to root, advisory id) for each `--ignore` in the workflows and preflight"""
+    """(file relative to root, advisory id or None, the argument as written) for each `--ignore` in the
+    workflows and preflight; the id is None when the argument is not one (unquoted or in one pair of
+    quotes)"""
     files = sorted((root / ".github" / "workflows").glob("*.y*ml"))
     files.append(root / "scripts" / "preflight.sh")
     out = []
     for f in files:
         if f.is_file():
             for m in CLI_IGNORE.finditer(f.read_text(encoding="utf-8")):
-                out.append((f.relative_to(root).as_posix(), m.group(1)))
+                arg = m.group(1)
+                bare = arg[1:-1] if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] in "\"'" else arg
+                aid = bare if ADVISORY_ID.fullmatch(bare) else None
+                out.append((f.relative_to(root).as_posix(), aid, arg))
     return out
 
 
@@ -139,7 +148,10 @@ def check(root, today):
         errors.append('deny.toml [advisories] does not set unused-ignored-advisory = "deny"')
     cli = cli_ignores(root)
     by_id = {h["id"]: h for h in holds}
-    for where, aid in cli:
+    for where, aid, arg in cli:
+        if aid is None:
+            errors.append(f"{where}: cargo audit --ignore {arg!r} cannot be read as an advisory id")
+            continue
         h = by_id.get(aid)
         if h is None:
             errors.append(f"{where}: cargo audit --ignore {aid} is not held in advisory_holds.toml")
