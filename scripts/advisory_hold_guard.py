@@ -24,8 +24,9 @@ hold is checked against Cargo.lock:
     carry their own reasons)
   - unused ignores: deny.toml's [advisories] must set `unused-ignored-advisory = "deny"`,
     so cargo deny fails on an ignore that no longer matches anything in the graph
-  - command-line ignores: every `--ignore <id>` (or `--ignore=<id>`, the id bare or in quotes) in the
-    workflows and scripts/preflight.sh must be held, and its held crate version must be in Cargo.lock;
+  - command-line ignores: every `--ignore <id>` (or `--ignore=<id>`, the id bare or in quotes) of a
+    `cargo audit` command in the workflows and scripts/preflight.sh (a command continued over lines with
+    a trailing backslash is one command; comment lines and other tools' `--ignore` are not read) must be held, and its held crate version must be in Cargo.lock;
     an `--ignore` whose argument is not an advisory id (a variable, an array, a typo, nothing) fails,
     since an ignore that cannot be read must not count as none
   - read nothing: with holds, the ignore lists and command lines together must give at
@@ -92,16 +93,37 @@ CLI_IGNORE = re.compile(r"--ignore(?![\w-])(?:=|[ \t]+)?(\S*)")
 ADVISORY_ID = re.compile(r"RUSTSEC-\d{4}-\d{4,}")
 
 
+def commands(text):
+    """The logical commands of a script or workflow: lines continued with a trailing backslash joined, comment
+    lines dropped"""
+    out, cur = [], ""
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        if line.rstrip().endswith("\\"):
+            cur += line.rstrip()[:-1] + " "
+            continue
+        out.append(cur + line)
+        cur = ""
+    if cur:
+        out.append(cur)
+    return out
+
+
 def cli_ignores(root):
-    """(file relative to root, advisory id or None, the argument as written) for each `--ignore` in the
-    workflows and preflight; the id is None when the argument is not one (unquoted or in one pair of
-    quotes)"""
+    """(file relative to root, advisory id or None, the argument as written) for each `--ignore` of a
+    `cargo audit` command in the workflows and preflight; the id is None when the argument is not one
+    (unquoted or in one pair of quotes)"""
     files = sorted((root / ".github" / "workflows").glob("*.y*ml"))
     files.append(root / "scripts" / "preflight.sh")
     out = []
     for f in files:
-        if f.is_file():
-            for m in CLI_IGNORE.finditer(f.read_text(encoding="utf-8")):
+        if not f.is_file():
+            continue
+        for command in commands(f.read_text(encoding="utf-8")):
+            if "cargo audit" not in command:
+                continue
+            for m in CLI_IGNORE.finditer(command):
                 arg = m.group(1)
                 bare = arg[1:-1] if len(arg) >= 2 and arg[0] == arg[-1] and arg[0] in "\"'" else arg
                 aid = bare if ADVISORY_ID.fullmatch(bare) else None
