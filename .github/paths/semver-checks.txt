@@ -7,6 +7,8 @@ Cargo.lock
 rust-toolchain.toml
 scripts/semver_gate.py
 scripts/test_semver_gate.py
+scripts/release_baseline.py
+scripts/test_release_baseline.py
 .github/semver-gate.toml
 .github/workflows/semver-checks.yml
 .github/paths/semver-checks.txt
