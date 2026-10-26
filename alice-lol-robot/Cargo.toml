@@ -17,7 +17,7 @@ categories = ["graphics", "game-development", "robotics"]
 [dependencies]
 alice-lol = { git = "https://github.com/ext-sakamoro/ALICE-LOL", rev = "41268d9097095d5765480b12b10902822a41755f", version = "0.5.0", default-features = false }
 alice-lol-humanoid = { git = "https://github.com/ext-sakamoro/ALICE-LOL", rev = "41268d9097095d5765480b12b10902822a41755f", version = "0.1", default-features = false }
-glam = "0.29"
+glam = "0.34"
 # Law helpers: clamp with the canonical NaN (ALICE-Law G2)
 alice-det-math = { version = "0.5.1", default-features = false }
 
