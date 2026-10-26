@@ -45,7 +45,7 @@ members = [".", "alice-lol-robot"]
 [dev-dependencies]
 # SHA-256 of the recorded-bit scenarios (tests/semantics_golden.rs) and of the
 # semantics identifier fold (tests/kin_semantics_id.rs)
-sha2 = "0.10"
+sha2 = "0.11"
 
 [profile.release]
 opt-level = 3
