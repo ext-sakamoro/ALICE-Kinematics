@@ -27,6 +27,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 - CI: 公開する文面の検査 (`Public text` workflow、`scripts/public_text.sh`) を追加 ALICE-Law の `scripts/public_text_check.py` を `.github/public-text-pin` の revision (779fa44) で取得し、SHA-256 が一致した時だけ使って、HEAD の全 tracked file (path と本文) と送った commit (message・追加行・追加 path) を読む 何も比較できなければ失敗する preflight でも走る
 
 ### Changed
+- CI (ALICE-Law G9 / G11): 識別子の移動の検査器 (`scripts/id_move_check.py` と試験) を共有の新しい bytes にし、新しく足した associated const を受けるようにした 他の共有の file も ALICE-Law 5bb1bea9 の表が計画した bytes にし、shared-files と G11 の表の pin を上げた
 - CI (ALICE-Law G11): 共有の file を ALICE-Law 0a5de013 の表の目標の bytes にし、`.github/shared-files-pin` をその rev に移した `scripts/semver_gate.py` が使う `scripts/release_baseline.py` と試験を足し、semver-checks の workflow と preflight でその試験を走らせる `scripts/id_move_check.py` と試験は目標の bytes が決まり直すまで今の bytes のまま
 - CI の doc job は workspace 全体 (`cargo doc --no-deps --workspace`、alice-lol-robot を含む) を `-Dwarnings` で build する alice-lol-robot の doc comment の単位 (`[rad]` / `[m]` / `[N]`) を link にしないように書き、非公開の関数への link を外した
 - feature `lol` の alice-lol を path をやめて git の rev (ALICE-LOL 41268d9) で取る CI は ALICE-LOL / ALICE-Zip / ALICE-SDF を clone しない (security-audit の sibling の checkout と `.github/alice-siblings` も外した) `deny.toml` の `allow-git` に ALICE-LOL / ALICE-SDF / ALICE-Zip を足した
