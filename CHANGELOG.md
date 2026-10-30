@@ -27,6 +27,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 - CI: 公開する文面の検査 (`Public text` workflow、`scripts/public_text.sh`) を追加 ALICE-Law の `scripts/public_text_check.py` を `.github/public-text-pin` の revision (779fa44) で取得し、SHA-256 が一致した時だけ使って、HEAD の全 tracked file (path と本文) と送った commit (message・追加行・追加 path) を読む 何も比較できなければ失敗する preflight でも走る
 
 ### Changed
+- CI: 識別子の移動の検査の前に、比べる公開版の tree が path で依存する隣の repository を clone する手順を足した (`scripts/id_move_check.py --print-siblings` が名前と commit を出す、新しい検査器は公開版を隣の checkout と一緒に build する)
 - CI: 使っていない `.github/actions/alice-siblings` の写しを外した (この repository は隣の checkout を取らない、ALICE-Law の共有 file の表もこの写しを対象外としていた)、security-audit の path の条件からも外した
 - CI (ALICE-Law G9 / G11): 識別子の移動の検査器 (`scripts/id_move_check.py` と試験) を共有の新しい bytes にし、新しく足した associated const を受けるようにした 他の共有の file も ALICE-Law 40973a8a の表が計画した bytes にし、shared-files と G11 の表の pin を上げた
 - CI (ALICE-Law G11): 共有の file を ALICE-Law 0a5de013 の表の目標の bytes にし、`.github/shared-files-pin` をその rev に移した `scripts/semver_gate.py` が使う `scripts/release_baseline.py` と試験を足し、semver-checks の workflow と preflight でその試験を走らせる `scripts/id_move_check.py` と試験は目標の bytes が決まり直すまで今の bytes のまま

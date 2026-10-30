@@ -235,6 +235,16 @@ jobs:
         with:
           path: ~/.cargo/registry/cache/*/${{ steps.id-base.outputs.crate }}.crate
           key: id-move-${{ steps.id-base.outputs.crate }}
+      # the release base is built against the sibling repositories its tree depends on by path;
+      # --print-siblings names them (with the commits, which scripts/id_move_check.py fetches
+      # into these clones), and the check fails, naming the repository, when one is missing
+      - name: Identifier moves (the base's sibling checkouts)
+        working-directory: ALICE-Kinematics
+        run: |
+          set -euo pipefail
+          for repo in $(python3 scripts/id_move_check.py --print-siblings | awk '{print $1}' | sort -u); do
+            git clone -q --filter=blob:none "https://github.com/ext-sakamoro/${repo}" "../${repo}"
+          done
       - name: Identifier moves (against the published release)
         working-directory: ALICE-Kinematics
         run: python3 scripts/id_move_check.py
