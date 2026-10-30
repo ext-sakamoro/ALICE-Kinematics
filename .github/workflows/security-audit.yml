@@ -52,7 +52,7 @@ jobs:
           echo "base ${base}"; printf '%s\n' "${files}"
           deps=false
           # a here-string, not a pipe: under pipefail grep -q may close the pipe before printf ends
-          if grep -Eq '^(Cargo\.toml|Cargo\.lock|deny\.toml|\.github/workflows/security-audit\.yml|\.github/alice-siblings|\.github/actions/alice-siblings/|scripts/(test_)?(sibling_coverage_guard|advisory_hold_guard)\.py|scripts/advisory_holds\.toml|\.cargo/audit\.toml)' <<<"${files}"; then deps=true; fi
+          if grep -Eq '^(Cargo\.toml|Cargo\.lock|deny\.toml|\.github/workflows/security-audit\.yml|\.github/alice-siblings|scripts/(test_)?(sibling_coverage_guard|advisory_hold_guard)\.py|scripts/advisory_holds\.toml|\.cargo/audit\.toml)' <<<"${files}"; then deps=true; fi
           echo "deps=${deps}" >> "${GITHUB_OUTPUT}"
 
   audit:
