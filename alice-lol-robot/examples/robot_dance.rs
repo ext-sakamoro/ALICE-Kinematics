@@ -1,31 +1,39 @@
 //! Sequence / Parallel 合成 demo
 //!
 //! LOL Program の合成 verb (`Sequence` / `Parallel`) が Kinematics packet に flatten される
-//! 挙動と humanoid 側の逐次適用を確認
+//! 挙動と骨格側の逐次適用を確認
 //!
 //! 実行:
 //! ```bash
 //! cargo run --example robot_dance -p alice-lol-robot
 //! ```
 
+use alice_kinematics::skeleton::Skeleton;
 use alice_lol::intent::{grasp, parallel, release, rest, sequence, walk, HandSide, ProgramBuilder};
 use alice_lol::SdfNode;
-use alice_lol_humanoid::{HumanoidTemplate, Joint};
-use alice_lol_robot::{HumanoidIntent, IntentPacketStream, SafetyLaw};
+use alice_lol_robot::{
+    joint_position, skeleton_capsules, HumanoidIntent, IntentPacketStream, SafetyLaw,
+};
 use glam::Vec3;
 use std::sync::Arc;
+
+/// capsule の半径と SmoothUnion の滑らかさ (m、骨格の単位)
+const BONE_RADIUS: f32 = 0.05;
+const BONE_SMOOTHNESS: f32 = 0.05;
 
 fn main() {
     println!("=== alice-lol-robot: Sequence / Parallel composition demo ===\n");
 
-    let humanoid = HumanoidTemplate::default();
+    let body = Skeleton::default_humanoid();
 
     // 対象カップを (0.6, 1.0, 0.2) に置く
     let cup = SdfNode::Translate {
         child: Arc::new(SdfNode::Sphere { radius: 0.04 }),
         offset: Vec3::new(0.6, 1.0, 0.2),
     };
-    let mut builder = ProgramBuilder::new().with_sdf(humanoid.to_sdf(0.15));
+    let mut builder = ProgramBuilder::new().with_sdf(
+        skeleton_capsules(&body, BONE_RADIUS, BONE_SMOOTHNESS).expect("the skeleton has bones"),
+    );
     let cup_id = builder.register(cup);
 
     // Sequence: walk → grasp → walk → release → rest
@@ -55,15 +63,15 @@ fn main() {
         return;
     }
 
-    // humanoid apply (Sequence = fold left、Parallel = 先頭のみ)
+    // 骨格に apply (Sequence = fold left、Parallel = 先頭のみ)
     let final_pose = program
         .intent
         .as_ref()
-        .map_or_else(|| humanoid.clone(), |i| humanoid.apply_intent(i).unwrap());
-    let waist = final_pose.joints[&Joint::Waist];
+        .map_or_else(|| body.clone(), |i| body.apply_intent(i).unwrap());
+    let waist = joint_position(&final_pose, "waist").expect("waist");
     println!(
         "\nfinal waist after dance: ({:.2}, {:.2}, {:.2})",
-        waist[0], waist[1], waist[2]
+        waist.x, waist.y, waist.z
     );
 
     // packet stream

@@ -66,9 +66,9 @@ let intents = intent_to_kinematics(&lol_intent, &positions).unwrap();
 
 ### alice-lol-robot (workspace member)
 
-- `alice-lol-robot/` — LOL の Phase 3 intent verb を humanoid の FK と 8-byte の Kinematics packet にする template (alice-lol / alice-lol-humanoid / alice-kinematics の `lol`)
+- `alice-lol-robot/` — LOL の Phase 3 intent verb を Kinematics の骨格 (`Skeleton`) の FK と 8-byte の Kinematics packet にする template (alice-lol / alice-kinematics の `lol`) 骨格の骨から capsule の鎖の SDF を作る `skeleton_capsules`
 - examples: `robot_grasp` / `robot_walk` / `robot_dance` (`cargo run -p alice-lol-robot --example robot_grasp`)
-- alice-lol と alice-lol-humanoid は git の rev で取る
+- alice-lol は git の rev で取る
 
 ## Quick Start
 

@@ -111,7 +111,7 @@ step "ci.yml / test: cargo test (encoder)"
 step "ci.yml / test: cargo test (lol bridge)"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh nan_boundaries=51 -- cargo test --lib --tests --features lol )
 step "ci.yml / test: cargo test (alice-lol-robot, with its analytic law tests counted)"
-( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh analytic_robot_law=29 -- cargo test -p alice-lol-robot --all-targets )
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh analytic_robot_law=29,skeleton_intent=4 -- cargo test -p alice-lol-robot --all-targets )
 
 step "ci.yml / release: cargo test --release (default, with the Law tests counted)"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh semantics_golden=6,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=50,skeleton_pose=4 -- cargo test --release --lib --tests )
@@ -120,7 +120,7 @@ step "ci.yml / release: cargo test --release (encoder)"
 step "ci.yml / release: cargo test --release (lol bridge)"
 ( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh nan_boundaries=51 -- cargo test --release --lib --tests --features lol )
 step "ci.yml / release: cargo test --release (alice-lol-robot, with its analytic law tests counted)"
-( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh analytic_robot_law=29 -- cargo test --release -p alice-lol-robot --all-targets )
+( export CARGO_TERM_COLOR="always" RUSTFLAGS="-Dwarnings"; scripts/run_tests.sh analytic_robot_law=29,skeleton_intent=4 -- cargo test --release -p alice-lol-robot --all-targets )
 step "ci.yml / float-environment: Float environment (debug and release)"
 scripts/run_tests.sh float_environment=2 -- cargo test --test float_environment
 scripts/run_tests.sh float_environment=2 -- cargo test --release --test float_environment

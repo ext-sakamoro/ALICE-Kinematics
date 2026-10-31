@@ -43,7 +43,7 @@ jobs:
         run: scripts/run_tests.sh nan_boundaries=51 -- cargo test --lib --tests --features lol
       - name: cargo test (alice-lol-robot, with its analytic law tests counted)
         working-directory: ALICE-Kinematics
-        run: scripts/run_tests.sh analytic_robot_law=29 -- cargo test -p alice-lol-robot --all-targets
+        run: scripts/run_tests.sh analytic_robot_law=29,skeleton_intent=4 -- cargo test -p alice-lol-robot --all-targets
       - name: library has no rerun dependency (all features)
         working-directory: ALICE-Kinematics
         run: |
@@ -81,7 +81,7 @@ jobs:
         run: scripts/run_tests.sh nan_boundaries=51 -- cargo test --release --lib --tests --features lol
       - name: cargo test --release (alice-lol-robot, with its analytic law tests counted)
         working-directory: ALICE-Kinematics
-        run: scripts/run_tests.sh analytic_robot_law=29 -- cargo test --release -p alice-lol-robot --all-targets
+        run: scripts/run_tests.sh analytic_robot_law=29,skeleton_intent=4 -- cargo test --release -p alice-lol-robot --all-targets
 
   float-environment:
     # ALICE-Law G14 on each OS: round-to-nearest-even and no flush-to-zero at run

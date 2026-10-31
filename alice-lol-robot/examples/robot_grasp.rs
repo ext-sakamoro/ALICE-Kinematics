@@ -1,8 +1,8 @@
-//! Grasp verb → humanoid + 8-byte packet demo
+//! Grasp verb → skeleton + 8-byte packet demo
 //!
 //! LOL Program (`ProgramBuilder` + `grasp` verb + target entity) を組み立てて
 //! - `SafetyLaw::guard_program` で静的検査
-//! - `HumanoidIntent::apply_intent` で humanoid pose 反映 (MVP: Grasp は変化なし)
+//! - `HumanoidIntent::apply_intent` で骨格に反映 (MVP: Grasp は変化なし)
 //! - `IntentPacketStream::from_program` で 8-byte packet 群を出力
 //!
 //! 実行:
@@ -10,22 +10,28 @@
 //! cargo run --example robot_grasp -p alice-lol-robot
 //! ```
 
+use alice_kinematics::skeleton::Skeleton;
 use alice_lol::intent::{grasp, HandSide, ProgramBuilder};
 use alice_lol::SdfNode;
-use alice_lol_humanoid::HumanoidTemplate;
-use alice_lol_robot::{HumanoidIntent, IntentPacketStream, SafetyLaw};
+use alice_lol_robot::{
+    joint_position, skeleton_capsules, HumanoidIntent, IntentPacketStream, SafetyLaw,
+};
 use glam::Vec3;
 use std::sync::Arc;
+
+/// capsule の半径と SmoothUnion の滑らかさ (m、骨格の単位)
+const BONE_RADIUS: f32 = 0.05;
+const BONE_SMOOTHNESS: f32 = 0.05;
 
 fn main() {
     println!("=== alice-lol-robot: Grasp verb demo ===\n");
 
-    // Step 1: humanoid template (10 頭身 canonical)
-    let humanoid = HumanoidTemplate::default();
+    // Step 1: 骨格 (身長 1.70 m の T-pose、m)
+    let body = Skeleton::default_humanoid();
     println!(
-        "humanoid: {} joints, waist at {:?}",
-        humanoid.joints.len(),
-        humanoid.joints[&alice_lol_humanoid::Joint::Waist]
+        "skeleton: {} joints, waist at {:?}",
+        body.joints.len(),
+        joint_position(&body, "waist").expect("waist")
     );
 
     // Step 2: LOL Program 組立 — 対象カップを右手で掴む
@@ -33,7 +39,9 @@ fn main() {
         child: Arc::new(SdfNode::Sphere { radius: 0.05 }),
         offset: Vec3::new(0.5, 1.0, 0.3),
     };
-    let mut builder = ProgramBuilder::new().with_sdf(humanoid.to_sdf(0.15));
+    let mut builder = ProgramBuilder::new().with_sdf(
+        skeleton_capsules(&body, BONE_RADIUS, BONE_SMOOTHNESS).expect("the skeleton has bones"),
+    );
     let cup_id = builder.register(cup);
     let program = builder
         .with_intent(grasp(cup_id, HandSide::Right, 3.0))
@@ -55,12 +63,12 @@ fn main() {
         }
     }
 
-    // Step 4: humanoid pose 反映 (MVP: Grasp は変化なし、Phase R.6+ で IK)
-    let posed = humanoid
+    // Step 4: 骨格に反映 (MVP: Grasp は変化なし、Phase R.6+ で IK)
+    let posed = body
         .apply_intent(&grasp(cup_id, HandSide::Right, 3.0))
         .unwrap();
     println!(
-        "humanoid pose: {} joints (Grasp MVP = unchanged)",
+        "skeleton pose: {} joints (Grasp MVP = unchanged)",
         posed.joints.len()
     );
 

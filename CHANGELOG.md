@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- **破壊的** `alice-lol-robot`: `HumanoidIntent` は `alice_kinematics::skeleton::Skeleton` に実装した (以前は ALICE-LOL の人型 template の crate、その依存を外した) 単位は m (身長 1.70 の `Skeleton::default_humanoid`、以前の template は高さ 5 の単位) `Walk` は根 (`Hips`) の local を目的地に置いて FK をやり直す (全関節が同じ量だけ平行移動) 8-byte の packet は以前と byte で一致する (例 3 本の program を試験で固定) 関節の名前は表 `JOINTS` (16 の名前 → 関節、関節は自分の骨の端) の 1 箇所で引く (`joint_position`) 骨の capsule の鎖の SDF `skeleton_capsules` (親から子の関節へ、長さ 0 の骨は除く) を足し、例はこれで体の SDF を作る 試験 `tests/skeleton_intent.rs` (4 本: packet の byte・`Walk` の位置を骨の長さから手で足した値・capsule と骨の対応・骨の無い骨格) CI と preflight の `scripts/run_tests.sh` に `skeleton_intent=4` を足した 腰幅の無い placeholder の骨格なので左右の脚の capsule は重なる
 - `Skeleton::with_height` (と `default_humanoid`) の姿勢を VRM 1.0 の軸 (+Y が上、正面 +Z、本人の左が +X) の T-pose にした 骨ごとの向きの表 `BONE_DIRECTIONS` (背骨・首・頭は上、肩と腕は水平に左 +X / 右 -X、脚は下、足と爪先は前) と既存の骨の長さの積を親に足す 以前は全部の骨が +Y を向き、脚も頭の側に伸びていた 長さと親子は変わらない 頭の関節は腰から (0.18 + 0.20 + 0.12 + 0.10) · h / 1.70 上、足首は (0.42 + 0.40) · h / 1.70 下 (関節の幅で身長ではない、頭頂と足裏の関節は無い) 腰幅は無いので左右の脚は x = 0 で重なる 試験 `tests/skeleton_pose.rs` (4 本、期待値は骨の長さから手で足したもの) CI と preflight の `scripts/run_tests.sh` に `skeleton_pose=4` を足した
 
 ### Added
