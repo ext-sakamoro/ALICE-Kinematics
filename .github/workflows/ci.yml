@@ -34,7 +34,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test (default, with the Law tests counted)
         working-directory: ALICE-Kinematics
-        run: scripts/run_tests.sh semantics_golden=6,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=50 -- cargo test --lib --tests
+        run: scripts/run_tests.sh semantics_golden=6,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=50,skeleton_pose=4 -- cargo test --lib --tests
       - name: cargo test (encoder, with the encoder's NaN boundaries counted)
         working-directory: ALICE-Kinematics
         run: scripts/run_tests.sh law_max_min_ties=5,nan_boundaries=59 -- cargo test --lib --tests --features encoder
@@ -72,7 +72,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test --release (default, with the Law tests counted)
         working-directory: ALICE-Kinematics
-        run: scripts/run_tests.sh semantics_golden=6,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=50 -- cargo test --release --lib --tests
+        run: scripts/run_tests.sh semantics_golden=6,kin_semantics_id=11,float_edge_golden=4,law_max_min_ties=4,stream_hello=14,float_environment=2,nan_boundaries=50,skeleton_pose=4 -- cargo test --release --lib --tests
       - name: cargo test --release (encoder, with the encoder's NaN boundaries counted)
         working-directory: ALICE-Kinematics
         run: scripts/run_tests.sh law_max_min_ties=5,nan_boundaries=59 -- cargo test --release --lib --tests --features encoder
