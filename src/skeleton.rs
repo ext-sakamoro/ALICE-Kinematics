@@ -172,6 +172,36 @@ const BONE_LENGTHS: [f32; BONE_COUNT] = [
     0.00, // LeftFootIk (virtual)
 ];
 
+/// Each bone's direction in the placeholder T-pose, on the VRM 1.0 axes: +Y up, the character
+/// faces +Z, the character's left is +X. The spine, neck and head go up, the shoulders and arms
+/// go out horizontally (left +X, right -X), the legs go down and the feet and toes forward.
+/// Directions only: the lengths are [`BONE_LENGTHS`]. The zero-length bones (the root and the
+/// virtual IK target) take +Y and stay at their parent.
+const BONE_DIRECTIONS: [[f32; 3]; BONE_COUNT] = [
+    [0.0, 1.0, 0.0],  // Hips (root)
+    [0.0, 1.0, 0.0],  // Spine
+    [0.0, 1.0, 0.0],  // Chest
+    [0.0, 1.0, 0.0],  // Neck
+    [0.0, 1.0, 0.0],  // Head
+    [1.0, 0.0, 0.0],  // LeftShoulder
+    [1.0, 0.0, 0.0],  // LeftUpperArm
+    [1.0, 0.0, 0.0],  // LeftLowerArm
+    [1.0, 0.0, 0.0],  // LeftHand
+    [-1.0, 0.0, 0.0], // RightShoulder
+    [-1.0, 0.0, 0.0], // RightUpperArm
+    [-1.0, 0.0, 0.0], // RightLowerArm
+    [-1.0, 0.0, 0.0], // RightHand
+    [0.0, -1.0, 0.0], // LeftUpperLeg
+    [0.0, -1.0, 0.0], // LeftLowerLeg
+    [0.0, 0.0, 1.0],  // LeftFoot
+    [0.0, 0.0, 1.0],  // LeftToe
+    [0.0, -1.0, 0.0], // RightUpperLeg
+    [0.0, -1.0, 0.0], // RightLowerLeg
+    [0.0, 0.0, 1.0],  // RightFoot
+    [0.0, 0.0, 1.0],  // RightToe
+    [0.0, 1.0, 0.0],  // LeftFootIk (virtual)
+];
+
 impl Skeleton {
     /// 標準体型の骨格を生成 (身長 1.7m)。
     #[must_use]
@@ -180,6 +210,14 @@ impl Skeleton {
     }
 
     /// 指定身長の骨格を生成。
+    ///
+    /// The placeholder pose is a T-pose on the VRM 1.0 axes (+Y up, facing +Z, the character's
+    /// left is +X): each joint sits at its parent plus its bone's direction
+    /// (`BONE_DIRECTIONS`) times its bone's length (`BONE_LENGTHS × height / 1.70`), with the
+    /// hips at the origin. The joint span (hips-relative joint ends), not stature: there is no
+    /// skull-top or sole joint, so the head joint is at (0.18 + 0.20 + 0.12 + 0.10) · h / 1.70
+    /// above the hips and the ankles (0.42 + 0.40) · h / 1.70 below. The placeholder has no hip
+    /// width: both legs hang from the hips at x = 0 and coincide.
     #[must_use]
     pub fn with_height(height: f32) -> Self {
         let scale = height / 1.70;
@@ -214,11 +252,15 @@ impl Skeleton {
             .enumerate()
             .map(|(i, &id)| {
                 let bone_length = BONE_LENGTHS[i] * scale;
-                let local_y = bone_length;
+                let [dx, dy, dz] = BONE_DIRECTIONS[i];
                 SkeletonJoint {
                     id,
                     parent: PARENT_TABLE[i],
-                    local_position: Vec3k::new(0.0, local_y, 0.0),
+                    local_position: Vec3k::new(
+                        dx * bone_length,
+                        dy * bone_length,
+                        dz * bone_length,
+                    ),
                     local_rotation: Vec3k::ZERO,
                     world_position: Vec3k::ZERO,
                     bone_length,
