@@ -23,7 +23,8 @@ use alice_kinematics::autorig::{auto_rig, AutoRigConfig, MeshView};
 use alice_kinematics::hand::{Finger, FingerType, HandModel};
 use alice_kinematics::joint::rotate_vec;
 use alice_kinematics::predictor::QuinticCoeffs;
-use alice_kinematics::skeleton::{BoneId, Skeleton};
+use alice_kinematics::rest::{BoneFrame, EndPoint, RestSkeleton};
+use alice_kinematics::skeleton::{BoneId, Skeleton, SkeletonBuildError};
 use alice_kinematics::{
     ArmChain, Intent, IntentFlags, IntentType, JointConstraint, Predictor, Vec3k,
 };
@@ -762,4 +763,62 @@ mod lol {
         let values: Vec<f32> = intents.iter().flat_map(|i| v3(i.target)).collect();
         assert_canonical("intent_to_kinematics", &values);
     }
+}
+
+/// `from_world_positions` refuses a NaN coordinate or height, so no NaN reaches what it returns
+#[test]
+fn boundary_skeleton_from_world_positions() {
+    let hips = Vec3k::new(0.0, 1.0, 0.0);
+    assert_eq!(
+        Skeleton::from_world_positions(&[(BoneId::Hips, nan3())], 1.0).unwrap_err(),
+        SkeletonBuildError::NonFinite(BoneId::Hips)
+    );
+    assert_eq!(
+        Skeleton::from_world_positions(&[(BoneId::Hips, hips)], odd_nan()).unwrap_err(),
+        SkeletonBuildError::InvalidHeight
+    );
+    let s = Skeleton::from_world_positions(&[(BoneId::Hips, hips)], 1.0).expect("root");
+    assert!(s.joints[0].world_position.y.is_finite());
+}
+
+/// a skeleton holding NaN joints carries its end points as the canonical NaN
+#[test]
+fn boundary_restskeleton_end_point() {
+    let s = Skeleton::with_height(odd_nan());
+    let mut r = RestSkeleton::new(s, &[(EndPoint::HeadTop, Vec3k::new(0.0, 1.5, 0.0))])
+        .expect("finite end point");
+    // the caller's own write of a signed, payload NaN into the joint the end point rides on
+    let k = r
+        .skeleton()
+        .joints
+        .iter()
+        .position(|j| j.id == BoneId::Head)
+        .expect("head");
+    r.skeleton_mut().joints[k].world_position = nan3();
+    let p = r.end_point(EndPoint::HeadTop).expect("head");
+    assert_canonical("end_point", &v3(p));
+}
+
+/// a frame is built only from finite input: a NaN axis is refused, and a skeleton holding NaN
+/// joints has no frames
+fn nan_frames_refused() {
+    assert!(BoneFrame::along(nan3()).is_err());
+    assert!(BoneFrame::new(Vec3k::new(1.0, 0.0, 0.0), nan3()).is_err());
+    let r = RestSkeleton::new(Skeleton::with_height(odd_nan()), &[]).expect("no end points");
+    assert!(BoneId::ALL.iter().all(|&b| r.frame(b).is_none()));
+}
+
+#[test]
+fn boundary_boneframe_axis() {
+    nan_frames_refused();
+}
+
+#[test]
+fn boundary_boneframe_width() {
+    nan_frames_refused();
+}
+
+#[test]
+fn boundary_boneframe_depth() {
+    nan_frames_refused();
 }

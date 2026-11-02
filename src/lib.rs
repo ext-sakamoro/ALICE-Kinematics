@@ -50,6 +50,7 @@ pub mod joint;
 mod nan;
 pub mod predictor;
 pub mod prelude;
+pub mod rest;
 pub mod semantics;
 pub mod skeleton;
 pub mod stream;

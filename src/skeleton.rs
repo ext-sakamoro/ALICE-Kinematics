@@ -59,6 +59,10 @@ pub enum BoneId {
     LeftFootIk,
     /// 右足IKターゲット。
     RightFootIk,
+    /// Upper chest, between `Chest` and the neck and shoulders. Not in the placeholder tables
+    /// (`BONE_COUNT`, `with_height`): a skeleton has it when it is built with
+    /// [`Skeleton::from_world_positions`].
+    UpperChest,
 }
 
 /// 骨格関節の総数。
@@ -355,6 +359,210 @@ impl Skeleton {
             height: self.height,
         }
         .canonical();
+    }
+}
+
+impl BoneId {
+    /// Every bone id, each parent before its children: the order [`Skeleton::from_world_positions`]
+    /// lays the joints out in. `UpperChest` follows `Chest`; both IK targets come last.
+    pub const ALL: [Self; 24] = [
+        Self::Hips,
+        Self::Spine,
+        Self::Chest,
+        Self::UpperChest,
+        Self::Neck,
+        Self::Head,
+        Self::LeftShoulder,
+        Self::LeftUpperArm,
+        Self::LeftLowerArm,
+        Self::LeftHand,
+        Self::RightShoulder,
+        Self::RightUpperArm,
+        Self::RightLowerArm,
+        Self::RightHand,
+        Self::LeftUpperLeg,
+        Self::LeftLowerLeg,
+        Self::LeftFoot,
+        Self::LeftToe,
+        Self::RightUpperLeg,
+        Self::RightLowerLeg,
+        Self::RightFoot,
+        Self::RightToe,
+        Self::LeftFootIk,
+        Self::RightFootIk,
+    ];
+
+    /// The parent in the humanoid hierarchy. With `upper_chest`, the neck and both shoulders hang
+    /// from `UpperChest` (which hangs from `Chest`); without it they hang from `Chest`, as in the
+    /// placeholder tables. Both IK targets hang from `Hips`. `Hips` is the root.
+    #[must_use]
+    pub const fn parent_in(self, upper_chest: bool) -> Option<Self> {
+        let top = if upper_chest {
+            Self::UpperChest
+        } else {
+            Self::Chest
+        };
+        match self {
+            Self::Hips => None,
+            Self::Spine
+            | Self::LeftUpperLeg
+            | Self::RightUpperLeg
+            | Self::LeftFootIk
+            | Self::RightFootIk => Some(Self::Hips),
+            Self::Chest => Some(Self::Spine),
+            Self::UpperChest => Some(Self::Chest),
+            Self::Neck | Self::LeftShoulder | Self::RightShoulder => Some(top),
+            Self::Head => Some(Self::Neck),
+            Self::LeftUpperArm => Some(Self::LeftShoulder),
+            Self::LeftLowerArm => Some(Self::LeftUpperArm),
+            Self::LeftHand => Some(Self::LeftLowerArm),
+            Self::RightUpperArm => Some(Self::RightShoulder),
+            Self::RightLowerArm => Some(Self::RightUpperArm),
+            Self::RightHand => Some(Self::RightLowerArm),
+            Self::LeftLowerLeg => Some(Self::LeftUpperLeg),
+            Self::LeftFoot => Some(Self::LeftLowerLeg),
+            Self::LeftToe => Some(Self::LeftFoot),
+            Self::RightLowerLeg => Some(Self::RightUpperLeg),
+            Self::RightFoot => Some(Self::RightLowerLeg),
+            Self::RightToe => Some(Self::RightFoot),
+        }
+    }
+
+    /// The same bone on the other side (left and right swapped, the IK targets included); a
+    /// bone on the midline is its own mirror.
+    #[must_use]
+    pub const fn mirror(self) -> Self {
+        match self {
+            Self::LeftShoulder => Self::RightShoulder,
+            Self::LeftUpperArm => Self::RightUpperArm,
+            Self::LeftLowerArm => Self::RightLowerArm,
+            Self::LeftHand => Self::RightHand,
+            Self::RightShoulder => Self::LeftShoulder,
+            Self::RightUpperArm => Self::LeftUpperArm,
+            Self::RightLowerArm => Self::LeftLowerArm,
+            Self::RightHand => Self::LeftHand,
+            Self::LeftUpperLeg => Self::RightUpperLeg,
+            Self::LeftLowerLeg => Self::RightLowerLeg,
+            Self::LeftFoot => Self::RightFoot,
+            Self::LeftToe => Self::RightToe,
+            Self::RightUpperLeg => Self::LeftUpperLeg,
+            Self::RightLowerLeg => Self::LeftLowerLeg,
+            Self::RightFoot => Self::LeftFoot,
+            Self::RightToe => Self::LeftToe,
+            Self::LeftFootIk => Self::RightFootIk,
+            Self::RightFootIk => Self::LeftFootIk,
+            Self::Hips | Self::Spine | Self::Chest | Self::UpperChest | Self::Neck | Self::Head => {
+                self
+            }
+        }
+    }
+}
+
+/// Why [`Skeleton::from_world_positions`] refused its input.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkeletonBuildError {
+    /// There is no `Hips` joint (the root).
+    MissingRoot,
+    /// The same bone id is given more than once.
+    Duplicate(BoneId),
+    /// A coordinate of this joint is NaN or infinite.
+    NonFinite(BoneId),
+    /// The joint's parent in the hierarchy is not given, so the joint would hang outside the tree.
+    MissingParent {
+        /// The joint given.
+        bone: BoneId,
+        /// Its parent, not given.
+        parent: BoneId,
+    },
+    /// The height is NaN, infinite, zero or negative.
+    InvalidHeight,
+}
+
+impl core::fmt::Display for SkeletonBuildError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::MissingRoot => write!(f, "no Hips joint (the root)"),
+            Self::Duplicate(b) => write!(f, "bone {b:?} given more than once"),
+            Self::NonFinite(b) => write!(f, "bone {b:?} has a NaN or infinite coordinate"),
+            Self::MissingParent { bone, parent } => {
+                write!(f, "bone {bone:?} given without its parent {parent:?}")
+            }
+            Self::InvalidHeight => write!(f, "height is not a finite positive number"),
+        }
+    }
+}
+
+impl Skeleton {
+    /// A skeleton whose joints sit at the given world positions (a measured rest pose, for
+    /// example), in the units of the input (metres by the crate's convention).
+    ///
+    /// Any subset of [`BoneId::ALL`] closed under [`BoneId::parent_in`] is accepted, rooted at
+    /// `Hips`; giving `UpperChest` moves the neck and shoulders under it. The joints are laid out
+    /// in the order of [`BoneId::ALL`], whatever the order of the input. Each joint stores the
+    /// position given as its world position (exactly), the difference from its parent as its
+    /// local position, the distance to its parent (correctly rounded) as its bone length (0 at the
+    /// root) and a zero local rotation (the pose).
+    ///
+    /// # Errors
+    /// [`SkeletonBuildError`]: no `Hips`, a repeated id, a NaN or infinite coordinate, a joint
+    /// whose parent is not given, or a height that is not finite and positive.
+    pub fn from_world_positions(
+        positions: &[(BoneId, Vec3k)],
+        height: f32,
+    ) -> Result<Self, SkeletonBuildError> {
+        if !(height.is_finite() && height > 0.0) {
+            return Err(SkeletonBuildError::InvalidHeight);
+        }
+        let mut given: [Option<Vec3k>; 24] = [None; 24];
+        let slot = |id: BoneId| BoneId::ALL.iter().position(|&b| b == id).unwrap_or(0);
+        for &(id, p) in positions {
+            if !(p.x.is_finite() && p.y.is_finite() && p.z.is_finite()) {
+                return Err(SkeletonBuildError::NonFinite(id));
+            }
+            let k = slot(id);
+            if given[k].is_some() {
+                return Err(SkeletonBuildError::Duplicate(id));
+            }
+            given[k] = Some(p);
+        }
+        if given[slot(BoneId::Hips)].is_none() {
+            return Err(SkeletonBuildError::MissingRoot);
+        }
+        let upper_chest = given[slot(BoneId::UpperChest)].is_some();
+        // the joints in the order of ALL (parents first), each with its parent's index in `joints`
+        let mut index: [Option<usize>; 24] = [None; 24];
+        let mut joints = Vec::new();
+        for (k, &id) in BoneId::ALL.iter().enumerate() {
+            let Some(world) = given[k] else { continue };
+            let (parent, parent_world) = match id.parent_in(upper_chest) {
+                None => (None, Vec3k::ZERO),
+                Some(p) => match (index[slot(p)], given[slot(p)]) {
+                    (Some(i), Some(pw)) => (Some(i), pw),
+                    _ => {
+                        return Err(SkeletonBuildError::MissingParent {
+                            bone: id,
+                            parent: p,
+                        })
+                    }
+                },
+            };
+            let local = world - parent_world;
+            index[k] = Some(joints.len());
+            joints.push(SkeletonJoint {
+                id,
+                parent,
+                local_position: local,
+                local_rotation: Vec3k::ZERO,
+                world_position: world,
+                // correctly rounded (Vec3k::length is an approximate root)
+                bone_length: if parent.is_some() {
+                    alice_det_math::sqrt(local.length_sq())
+                } else {
+                    0.0
+                },
+            });
+        }
+        Ok(Self { joints, height }.canonical())
     }
 }
 

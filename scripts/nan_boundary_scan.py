@@ -63,6 +63,8 @@ EXEMPT = {
     "Skeleton::find_joint": "returns a reference to a joint as stored; every crate computation that "
                             "stores into a joint canonicalises (with_height, rescale, hypothesis_to_skeleton, "
                             "auto_rig_on_sphere), the rest is the caller's own write through the pub fields",
+    "RestSkeleton::skeleton": "returns a reference to the skeleton as stored (as Skeleton::find_joint)",
+    "RestSkeleton::skeleton_mut": "returns a reference to the skeleton as stored (as Skeleton::find_joint)",
     "extended_intents": "an iterator of ExtendedIntent::decode over the packets: decodes Q8.8 integers (q8_to_f32 of an i16): every float it returns is a finite number, so no NaN can leave it",
 }
 
