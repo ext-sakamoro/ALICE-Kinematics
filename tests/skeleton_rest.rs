@@ -588,3 +588,39 @@ fn huge_finite_input_gives_unit_frames_or_is_refused() {
         RestError::NonFinite
     );
 }
+
+#[test]
+fn an_axis_under_the_length_floor_is_refused() {
+    // the floor is 1e-9: 1e-10 is under it, 1e-8 over it
+    assert_eq!(
+        BoneFrame::new(v(1e-10, 0.0, 0.0), v(0.0, 0.0, 1.0)).unwrap_err(),
+        RestError::Degenerate
+    );
+    assert_eq!(
+        BoneFrame::along(v(1e-10, 0.0, 0.0)).unwrap_err(),
+        RestError::Degenerate
+    );
+    assert_eq!(
+        BoneFrame::along(v(0.0, 0.0, 0.0)).unwrap_err(),
+        RestError::Degenerate
+    );
+    let f = BoneFrame::along(v(1e-8, 0.0, 0.0)).expect("over the floor");
+    assert_eq!(f.axis(), v(1.0, 0.0, 0.0));
+}
+
+#[test]
+fn a_zero_depth_hint_is_refused() {
+    assert_eq!(
+        BoneFrame::new(v(1.0, 0.0, 0.0), Vec3k::ZERO).unwrap_err(),
+        RestError::Degenerate
+    );
+    let mut r = RestSkeleton::new(
+        Skeleton::from_world_positions(&figure(), 1.5).expect("valid"),
+        &ends(),
+    )
+    .expect("valid");
+    assert_eq!(
+        r.set_frame(BoneId::LeftLowerArm, Vec3k::ZERO).unwrap_err(),
+        RestError::Degenerate
+    );
+}

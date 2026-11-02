@@ -110,12 +110,10 @@ impl BoneFrame {
             return Err(RestError::Degenerate);
         }
         let axis = div(along, len);
-        // the hint scaled to its largest component: its products with the axis cannot overflow
-        let hl = exact_len(depth_hint);
-        if !(hl.is_finite() && hl > 0.0) {
-            return Err(RestError::Degenerate);
-        }
-        let h = div(depth_hint, hl);
+        // the hint scaled to unit length: its products with the axis cannot overflow. A zero hint
+        // gives NaN here and a hint whose length overflows gives zero: both end in Degenerate
+        // below (the parallel floor or the unit check), the one refusal for each
+        let h = div(depth_hint, exact_len(depth_hint));
         let d = h - axis.scale(h.dot(axis));
         let dl = exact_len(d);
         // parallel within ~1e-3 rad (h is a unit vector)
@@ -136,15 +134,9 @@ impl BoneFrame {
     /// # Errors
     /// As [`BoneFrame::new`].
     pub fn along(along: Vec3k) -> Result<Self, RestError> {
-        if !finite(along) {
-            return Err(RestError::NonFinite);
-        }
-        let len = exact_len(along);
-        if len <= MIN_LEN {
-            return Err(RestError::Degenerate);
-        }
-        // |a.z| > 1/sqrt 2, compared squared on the axis scaled to unit length (no overflow)
-        let a = div(along, len);
+        // |a.z| > 1/sqrt 2, compared squared on the axis scaled to unit length (no overflow). A
+        // non-finite, too short or overflowing `along` is refused by `new`, the one check for it
+        let a = div(along, exact_len(along));
         let hint = if 2.0 * a.z * a.z > a.length_sq() {
             Vec3k::new(0.0, 1.0, 0.0)
         } else {
