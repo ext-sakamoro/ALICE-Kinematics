@@ -4,15 +4,18 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 
 ## [Unreleased]
 
+### Breaking
+- `BoneId` に variant `UpperChest` を追加した (`#[non_exhaustive]` でない列挙なので、`BoneId` を網羅的に `match` する呼び出し側は compile が止まる) この crate に依存する repo で `BoneId` を使う箇所は 0 件 判別値は既存の 0..=22 を変えず 23 `BoneId::ALL` (24 個) もこの variant を含む
+
 ### Changed
 - `Skeleton::with_height` (と `default_humanoid`) の姿勢を VRM 1.0 の軸 (+Y が上、正面 +Z、本人の左が +X) の T-pose にした 骨ごとの向きの表 `BONE_DIRECTIONS` (背骨・首・頭は上、肩と腕は水平に左 +X / 右 -X、脚は下、足と爪先は前) と既存の骨の長さの積を親に足す 以前は全部の骨が +Y を向き、脚も頭の側に伸びていた 長さと親子は変わらない 頭の関節は腰から (0.18 + 0.20 + 0.12 + 0.10) · h / 1.70 上、足首は (0.42 + 0.40) · h / 1.70 下 (関節の幅で身長ではない、頭頂と足裏の関節は無い) 腰幅は無いので左右の脚は x = 0 で重なる 試験 `tests/skeleton_pose.rs` (4 本、期待値は骨の長さから手で足したもの) CI と preflight の `scripts/run_tests.sh` に `skeleton_pose=4` を足した
 
 ### Added
-- `Skeleton::from_world_positions` (`src/skeleton.rs`): 計測した world 位置から骨格を作る `BoneId::ALL` の部分集合で、親 (`BoneId::parent_in`) を含んで閉じ、根が `Hips` のものを受け付ける 入力の順に依らず `BoneId::ALL` の順 (親が先) に並べ、与えた位置をそのまま world 位置に、親との差を local 位置に、親との距離 (正しく丸めた平方根、`alice_det_math::sqrt`) を骨の長さに、姿勢の回転を 0 にする `Hips` が無い / 同じ id が 2 回 / NaN・無限大の座標 / 親の無い関節 / 有限で正でない身長は `SkeletonBuildError` で断る
+- `Skeleton::from_world_positions` (`src/skeleton.rs`): 計測した world 位置から骨格を作る `BoneId::ALL` の部分集合で、親 (`BoneId::parent_in`) を含んで閉じ、根が `Hips` のものを受け付ける 入力の順に依らず `BoneId::ALL` の順 (親が先) に並べ、与えた位置をそのまま world 位置に、親との差を local 位置に、親との距離 (正しく丸めた平方根、`alice_det_math::sqrt`) を骨の長さに、姿勢の回転を 0 にする `Hips` が無い / 同じ id が 2 回 / NaN・無限大の座標 / 親の無い関節 / 有限で正でない身長は `SkeletonBuildError` で断る 座標が有限でも親との差やその長さが `f32` に収まらない時も `NonFinite` で断る (長さは最大の成分で割ってから 2 乗するので、1e20 の骨は 1e20 の長さになる)
 - `BoneId::UpperChest` (列挙の最後に追加、判別値 23): 与えると首と左右の肩がその下に付く (`Chest` の子) 既定の表 (`BONE_COUNT` = 22、`with_height` / `default_humanoid`) は変えていないので、既定の骨格には無い `BoneId::parent_in(upper_chest)` は階層の親、`BoneId::mirror` は左右の入れ替え (IK 目標の左右を含む)
 - `BoneId::RightFootIk` を `from_world_positions` で左と同じく `Hips` の子として持てるようにした (既定の表は左のみのまま)
-- `alice_kinematics::rest`: 姿勢と別の静止時の情報 `RestSkeleton` (末端点 `EndPoint` = 頭頂・指先・爪先・踵、関節からの差で持つので関節と一緒に動く) と骨ごとの静止時の座標系 `BoneFrame` (骨の向き・幅・奥行きの単位 vector、`axis x width = depth`、奥行きの基準は前 (+Z)、骨が前後に 45 度より近い時は上 (+Y)) `set_frame` で奥行きの向き (骨の roll) を置き換える 姿勢 (`set_rotation`) は座標系を変えない
-- 試験 `tests/skeleton_rest.rs` (10 件、期待値は手で書いた階層と 3-4-5 の三角形で手計算した座標系、変異 6 種がそれぞれ失敗することを確認) と `tests/nan_boundaries.rs` の 5 件 CI と preflight の `scripts/run_tests.sh` に `skeleton_rest=10` を足し、`nan_boundaries` の最小数を 55 / 64 / 56 にした
+- `alice_kinematics::rest`: 姿勢と別の静止時の情報 `RestSkeleton` (末端点 `EndPoint` = 頭頂・指先・爪先・踵、関節からの差で持つので関節と一緒に動く) と骨ごとの静止時の座標系 `BoneFrame` (骨の向き・幅・奥行きの単位 vector、`axis x width = depth`、奥行きの基準は前 (+Z)、骨が前後に 45 度より近い時は上 (+Y)) `set_frame` で奥行きの向き (骨の roll) を置き換える 姿勢 (`set_rotation`) は座標系を変えない 返す座標系は必ず有限で単位長 (長さが `f32` に収まらない軸・0 の奥行き・軸と約 1e-3 rad 以内で平行な奥行きは `Degenerate`)、末端点の差が `f32` に収まらない時は `NonFinite`
+- 試験 `tests/skeleton_rest.rs` (13 件、期待値は手で書いた階層と 3-4-5 の三角形で手計算した座標系、z だけの NaN・無限大、ほぼ平行な奥行き、`f32` の上限近くの入力) と `tests/nan_boundaries.rs` の 5 件 (座標系の 3 つの accessor は別々の入力で 1 件ずつ) CI と preflight の `scripts/run_tests.sh` に `skeleton_rest=13` を足し、`nan_boundaries` の最小数を 55 / 64 / 56 にした
 - `alice-lol-robot` crate (ALICE-LOL から移した、crate 名と API は同じ) を workspace の member にした 試験 (lib と `tests/analytic_robot_law.rs`) を CI の test と release の job で走らせる
 - CI: `security-audit` workflow: cargo audit と cargo deny (`deny.toml` を追加) を、`.github/alice-siblings` に固定した実物の sibling (ALICE-LOL / ALICE-SDF / ALICE-Zip) と毎回新しい解決で走らせる (依存や設定の変更時、週次 水曜 04:23 UTC、手動) 解決と cargo deny の graph がこの crate と path の sibling を含むことを `scripts/sibling_coverage_guard.py` (試験付き) で確かめ、0 件の走査は失敗 bincode (unmaintained、alice-sdf 経由) は期限付きの保留 (`scripts/advisory_holds.toml`、`scripts/advisory_hold_guard.py` が版・依存元・期限を検査、2026-11-14 まで) で、それ以外の ignore は無い 保留は今日から 21 日以内に限る (guard が検査、延長は理由とともに日付を更新)
 - `conformance/g11-own.toml`: ALICE-Law G11 の表のうち、この crate 固有の行 (G2 の max / min の tie、G4 / G5 の golden、G6 の識別子、G7 / G8 の hello frame の識別子の照合、比較 0 件は `scripts/run_tests.sh` の試験) 共有の検査器の行は ALICE-Law の `conformance/g11-shared-rows.toml` から生成する

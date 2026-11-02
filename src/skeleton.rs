@@ -465,7 +465,8 @@ pub enum SkeletonBuildError {
     MissingRoot,
     /// The same bone id is given more than once.
     Duplicate(BoneId),
-    /// A coordinate of this joint is NaN or infinite.
+    /// A coordinate of this joint is NaN or infinite, or its offset from its parent (or that
+    /// offset's length) is too large for `f32`.
     NonFinite(BoneId),
     /// The joint's parent in the hierarchy is not given, so the joint would hang outside the tree.
     MissingParent {
@@ -476,6 +477,18 @@ pub enum SkeletonBuildError {
     },
     /// The height is NaN, infinite, zero or negative.
     InvalidHeight,
+}
+
+/// Length of `v`, correctly rounded and without overflow in the squares: `v` is scaled by its
+/// largest component first (`Vec3k::length` is an approximate root and squares unscaled). A
+/// length too large for `f32` is infinite; a non-finite component gives a non-finite length.
+pub(crate) fn exact_len(v: Vec3k) -> f32 {
+    let m = alice_det_math::max(alice_det_math::max(v.x.abs(), v.y.abs()), v.z.abs());
+    if m == 0.0 || !m.is_finite() {
+        return m;
+    }
+    let u = Vec3k::new(v.x / m, v.y / m, v.z / m);
+    m * alice_det_math::sqrt(u.length_sq())
 }
 
 impl core::fmt::Display for SkeletonBuildError {
@@ -500,7 +513,8 @@ impl Skeleton {
     /// `Hips`; giving `UpperChest` moves the neck and shoulders under it. The joints are laid out
     /// in the order of [`BoneId::ALL`], whatever the order of the input. Each joint stores the
     /// position given as its world position (exactly), the difference from its parent as its
-    /// local position, the distance to its parent (correctly rounded) as its bone length (0 at the
+    /// local position, the distance to its parent (correctly rounded, no overflow in the squares) as
+    /// its bone length (0 at the
     /// root) and a zero local rotation (the pose).
     ///
     /// # Errors
@@ -547,6 +561,19 @@ impl Skeleton {
                 },
             };
             let local = world - parent_world;
+            // finite ends can still differ by more than f32 holds, or have a length it does not
+            let bone_length = if parent.is_some() {
+                exact_len(local)
+            } else {
+                0.0
+            };
+            if !(local.x.is_finite()
+                && local.y.is_finite()
+                && local.z.is_finite()
+                && bone_length.is_finite())
+            {
+                return Err(SkeletonBuildError::NonFinite(id));
+            }
             index[k] = Some(joints.len());
             joints.push(SkeletonJoint {
                 id,
@@ -554,12 +581,7 @@ impl Skeleton {
                 local_position: local,
                 local_rotation: Vec3k::ZERO,
                 world_position: world,
-                // correctly rounded (Vec3k::length is an approximate root)
-                bone_length: if parent.is_some() {
-                    alice_det_math::sqrt(local.length_sq())
-                } else {
-                    0.0
-                },
+                bone_length,
             });
         }
         Ok(Self { joints, height }.canonical())

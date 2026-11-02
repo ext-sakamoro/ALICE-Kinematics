@@ -781,10 +781,10 @@ fn boundary_skeleton_from_world_positions() {
     assert!(s.joints[0].world_position.y.is_finite());
 }
 
-/// a skeleton holding NaN joints carries its end points as the canonical NaN
+/// an end point on a joint the caller set to a NaN comes out as the canonical NaN
 #[test]
 fn boundary_restskeleton_end_point() {
-    let s = Skeleton::with_height(odd_nan());
+    let s = Skeleton::default_humanoid();
     let mut r = RestSkeleton::new(s, &[(EndPoint::HeadTop, Vec3k::new(0.0, 1.5, 0.0))])
         .expect("finite end point");
     // the caller's own write of a signed, payload NaN into the joint the end point rides on
@@ -799,26 +799,38 @@ fn boundary_restskeleton_end_point() {
     assert_canonical("end_point", &v3(p));
 }
 
-/// a frame is built only from finite input: a NaN axis is refused, and a skeleton holding NaN
-/// joints has no frames
-fn nan_frames_refused() {
-    assert!(BoneFrame::along(nan3()).is_err());
-    assert!(BoneFrame::new(Vec3k::new(1.0, 0.0, 0.0), nan3()).is_err());
-    let r = RestSkeleton::new(Skeleton::with_height(odd_nan()), &[]).expect("no end points");
-    assert!(BoneId::ALL.iter().all(|&b| r.frame(b).is_none()));
-}
-
+/// `BoneFrame` is built only from finite input and refuses a frame that is not finite and unit,
+/// so its accessors return no NaN: each test drives one accessor from a NaN (refused) and from
+/// extreme finite input (a finite unit vector out)
 #[test]
 fn boundary_boneframe_axis() {
-    nan_frames_refused();
+    assert!(BoneFrame::along(nan3()).is_err());
+    // a skeleton holding NaN joints has no frames
+    let r = RestSkeleton::new(Skeleton::with_height(odd_nan()), &[]).expect("no end points");
+    assert!(BoneId::ALL.iter().all(|&b| r.frame(b).is_none()));
+    let a = BoneFrame::along(Vec3k::new(1e20, -1e20, 0.0))
+        .expect("finite length")
+        .axis();
+    assert!(a.x.is_finite() && a.y.is_finite() && a.z.is_finite());
+    assert!((a.length_sq() - 1.0).abs() <= 1e-5, "{a:?}");
 }
 
 #[test]
 fn boundary_boneframe_width() {
-    nan_frames_refused();
+    assert!(BoneFrame::new(Vec3k::new(1.0, 0.0, 0.0), nan3()).is_err());
+    let w = BoneFrame::new(Vec3k::new(0.0, 3e38, 0.0), Vec3k::new(2e38, 0.0, 2e38))
+        .expect("finite lengths")
+        .width();
+    assert!(w.x.is_finite() && w.y.is_finite() && w.z.is_finite());
+    assert!((w.length_sq() - 1.0).abs() <= 1e-5, "{w:?}");
 }
 
 #[test]
 fn boundary_boneframe_depth() {
-    nan_frames_refused();
+    assert!(BoneFrame::new(nan3(), Vec3k::new(0.0, 0.0, 1.0)).is_err());
+    let d = BoneFrame::new(Vec3k::new(1e-8, 0.0, 0.0), Vec3k::new(0.0, 1e-30, 1e-30))
+        .expect("tiny but finite")
+        .depth();
+    assert!(d.x.is_finite() && d.y.is_finite() && d.z.is_finite());
+    assert!((d.length_sq() - 1.0).abs() <= 1e-5, "{d:?}");
 }

@@ -470,3 +470,121 @@ fn building_twice_gives_the_same_bits() {
     };
     assert_eq!(bits(&a), bits(&b));
 }
+
+#[test]
+fn a_non_finite_z_alone_is_refused() {
+    for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        let mut p = figure();
+        p[7].1 = v(0.375, 1.0625, bad);
+        assert_eq!(
+            Skeleton::from_world_positions(&p, 1.5).unwrap_err(),
+            SkeletonBuildError::NonFinite(BoneId::LeftLowerArm)
+        );
+        let e = [(EndPoint::HeadTop, v(0.0, 1.5, bad))];
+        let s = Skeleton::from_world_positions(&figure(), 1.5).expect("valid");
+        assert_eq!(RestSkeleton::new(s, &e).unwrap_err(), RestError::NonFinite);
+        assert_eq!(
+            BoneFrame::along(v(0.0, 1.0, bad)).unwrap_err(),
+            RestError::NonFinite
+        );
+        assert_eq!(
+            BoneFrame::new(v(1.0, 0.0, 0.0), v(0.0, 0.0, bad)).unwrap_err(),
+            RestError::NonFinite
+        );
+    }
+}
+
+#[test]
+fn a_nearly_parallel_depth_hint_is_refused() {
+    // the hint's part across the axis is 1e-4 of its length, under the 1e-3 floor
+    assert_eq!(
+        BoneFrame::new(v(1.0, 0.0, 0.0), v(1.0, 1e-4, 0.0)).unwrap_err(),
+        RestError::Degenerate
+    );
+    // 1e-2 across is accepted, and the depth is the across part, normalised
+    let f = BoneFrame::new(v(1.0, 0.0, 0.0), v(1.0, 1e-2, 0.0)).expect("across enough");
+    assert_eq!(f.depth(), v(0.0, 1.0, 0.0));
+}
+
+#[test]
+fn huge_finite_input_gives_unit_frames_or_is_refused() {
+    // |along|^2 overflows f32, |along| does not: the frame is the exact unit one
+    let f = BoneFrame::along(v(1e20, 0.0, 0.0)).expect("finite length");
+    assert_eq!(
+        (f.axis(), f.width(), f.depth()),
+        (v(1.0, 0.0, 0.0), v(0.0, 1.0, 0.0), v(0.0, 0.0, 1.0))
+    );
+    let g = BoneFrame::new(v(0.0, -3e38, 0.0), v(0.0, 0.0, 3e38)).expect("finite lengths");
+    assert_eq!(
+        (g.axis(), g.width(), g.depth()),
+        (v(0.0, -1.0, 0.0), v(1.0, 0.0, 0.0), v(0.0, 0.0, 1.0))
+    );
+    // an axis of 1e20 toward the front takes the up reference (the rule read on the unit axis)
+    let h = BoneFrame::along(v(0.0, 0.0, 1e20)).expect("finite length");
+    assert_eq!(
+        (h.axis(), h.width(), h.depth()),
+        (v(0.0, 0.0, 1.0), v(1.0, 0.0, 0.0), v(0.0, 1.0, 0.0))
+    );
+    // finite components whose length is not (3e38 sqrt 2 > f32::MAX): refused, not a zero axis
+    assert_eq!(
+        BoneFrame::along(v(3e38, 3e38, 0.0)).unwrap_err(),
+        RestError::Degenerate
+    );
+    assert_eq!(
+        BoneFrame::new(v(3e38, -3e38, 0.0), v(0.0, 0.0, 1.0)).unwrap_err(),
+        RestError::Degenerate
+    );
+    // a bone 1e20 long: its length is 1e20, not infinity
+    let s = Skeleton::from_world_positions(
+        &[
+            (BoneId::Hips, v(0.0, 0.0, 0.0)),
+            (BoneId::Spine, v(0.0, 1e20, 0.0)),
+        ],
+        1.5,
+    )
+    .expect("finite");
+    assert_eq!(
+        s.find_joint(BoneId::Spine).expect("spine").bone_length,
+        1e20
+    );
+    // finite ends whose difference overflows: refused, not an infinite local position
+    assert_eq!(
+        Skeleton::from_world_positions(
+            &[
+                (BoneId::Hips, v(0.0, -3e38, 0.0)),
+                (BoneId::Spine, v(0.0, 3e38, 0.0))
+            ],
+            1.5,
+        )
+        .unwrap_err(),
+        SkeletonBuildError::NonFinite(BoneId::Spine)
+    );
+    // a difference that is finite but whose length is not (each part 3e38): refused
+    assert_eq!(
+        Skeleton::from_world_positions(
+            &[
+                (BoneId::Hips, v(0.0, 0.0, 0.0)),
+                (BoneId::Spine, v(3e38, 3e38, 0.0))
+            ],
+            1.5,
+        )
+        .unwrap_err(),
+        SkeletonBuildError::NonFinite(BoneId::Spine)
+    );
+    // an end point whose offset overflows: refused
+    let s = Skeleton::from_world_positions(
+        &[
+            (BoneId::Hips, v(0.0, 0.0, 0.0)),
+            (BoneId::Spine, v(0.0, 1.0, 0.0)),
+            (BoneId::Chest, v(0.0, 2.0, 0.0)),
+            (BoneId::Neck, v(0.0, 3.0, 0.0)),
+            (BoneId::Head, v(0.0, -3e38, 0.0)),
+        ],
+        1.5,
+    )
+    .expect("finite");
+    assert_eq!(
+        RestSkeleton::new(s, &[(EndPoint::HeadTop, v(0.0, 3e38, 0.0))]).unwrap_err(),
+        RestError::NonFinite
+    );
+}

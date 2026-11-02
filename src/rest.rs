@@ -17,19 +17,25 @@
 
 use crate::joint::Vec3k;
 use crate::nan::canon3;
-use crate::skeleton::{BoneId, Skeleton};
+use crate::skeleton::{exact_len, BoneId, Skeleton};
 use alloc::vec::Vec;
 
 /// Shortest segment that has a direction (in the input's units).
 const MIN_LEN: f32 = 1e-9;
 
-/// Length, correctly rounded (`Vec3k::length` is an approximate root, about 1e-5 relative).
-fn exact_len(v: Vec3k) -> f32 {
-    alice_det_math::sqrt(v.length_sq())
-}
-
 fn finite(v: Vec3k) -> bool {
     v.x.is_finite() && v.y.is_finite() && v.z.is_finite()
+}
+
+/// `v / len`, component by component (`scale(1 / len)` loses the bits of a huge `len`, whose
+/// reciprocal is subnormal)
+fn div(v: Vec3k, len: f32) -> Vec3k {
+    Vec3k::new(v.x / len, v.y / len, v.z / len)
+}
+
+/// finite and of unit length (to 1e-5 in the square)
+fn unit(v: Vec3k) -> bool {
+    finite(v) && (v.length_sq() - 1.0).abs() <= 1e-5
 }
 
 /// A point past the last joint of a chain, carried by that joint.
@@ -93,7 +99,8 @@ impl BoneFrame {
     ///
     /// # Errors
     /// [`RestError::NonFinite`] for a NaN or infinite input, [`RestError::Degenerate`] when
-    /// `along` is (nearly) zero or `depth_hint` is (nearly) parallel to it.
+    /// `along` is (nearly) zero, its length is too large for `f32`, or `depth_hint` is zero or
+    /// (within about 1e-3 rad) parallel to it. Every frame returned is finite and unit.
     pub fn new(along: Vec3k, depth_hint: Vec3k) -> Result<Self, RestError> {
         if !(finite(along) && finite(depth_hint)) {
             return Err(RestError::NonFinite);
@@ -102,15 +109,24 @@ impl BoneFrame {
         if len <= MIN_LEN {
             return Err(RestError::Degenerate);
         }
-        let axis = along.scale(1.0 / len);
-        let d = depth_hint - axis.scale(depth_hint.dot(axis));
-        let dl = exact_len(d);
-        // parallel within ~1e-3 rad of the hint's own length (all lengths finite: checked above)
-        if dl <= 1e-3 * exact_len(depth_hint) {
+        let axis = div(along, len);
+        // the hint scaled to its largest component: its products with the axis cannot overflow
+        let hl = exact_len(depth_hint);
+        if !(hl.is_finite() && hl > 0.0) {
             return Err(RestError::Degenerate);
         }
-        let depth = d.scale(1.0 / dl);
+        let h = div(depth_hint, hl);
+        let d = h - axis.scale(h.dot(axis));
+        let dl = exact_len(d);
+        // parallel within ~1e-3 rad (h is a unit vector)
+        if dl <= 1e-3 {
+            return Err(RestError::Degenerate);
+        }
+        let depth = div(d, dl);
         let width = depth.cross(axis);
+        if !(unit(axis) && unit(width) && unit(depth)) {
+            return Err(RestError::Degenerate);
+        }
         Ok(Self { axis, width, depth })
     }
 
@@ -127,8 +143,9 @@ impl BoneFrame {
         if len <= MIN_LEN {
             return Err(RestError::Degenerate);
         }
-        // |a.z| > 1/sqrt 2, compared squared so no root is taken: 2 z^2 > |along|^2
-        let hint = if 2.0 * along.z * along.z > along.length_sq() {
+        // |a.z| > 1/sqrt 2, compared squared on the axis scaled to unit length (no overflow)
+        let a = div(along, len);
+        let hint = if 2.0 * a.z * a.z > a.length_sq() {
             Vec3k::new(0.0, 1.0, 0.0)
         } else {
             Vec3k::new(0.0, 0.0, 1.0)
@@ -212,7 +229,11 @@ impl RestSkeleton {
             let at = skeleton
                 .joint_world_position(end.bone())
                 .ok_or(RestError::MissingBone(end.bone()))?;
-            offsets.push((end, p - at));
+            let off = p - at;
+            if !finite(off) || !exact_len(off).is_finite() {
+                return Err(RestError::NonFinite);
+            }
+            offsets.push((end, off));
         }
         let mut frames = Vec::new();
         for j in &skeleton.joints {
@@ -253,7 +274,7 @@ impl RestSkeleton {
     #[must_use]
     pub fn end_point(&self, end: EndPoint) -> Option<Vec3k> {
         let off = self.end_points.iter().find(|&&(e, _)| e == end)?.1;
-        // a skeleton holding NaN joints (with_height(NaN)) gives a NaN: the canonical one (G4)
+        // a joint the caller set to a NaN gives a NaN: the canonical one (G4)
         Some(canon3(
             self.skeleton.joint_world_position(end.bone())? + off,
         ))
