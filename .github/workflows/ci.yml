@@ -46,6 +46,7 @@ jobs:
         run: scripts/run_tests.sh analytic_robot_law=29 -- cargo test -p alice-lol-robot --all-targets
       - name: library has no rerun dependency (all features)
         working-directory: ALICE-Kinematics
+        shell: bash
         run: |
           tree=$(cargo tree -e normal,build --all-features)
           n=$(printf '%s\n' "$tree" | grep -c .)
@@ -116,6 +117,10 @@ jobs:
           "$PY" scripts/test_build_config_guard.py
           "$PY" scripts/build_config_guard.py
           "$PY" scripts/test_build_flags_check.py
+      - name: workflow_pipefail (test, then check)
+        run: |
+          python3 scripts/test_workflow_pipefail.py
+          python3 scripts/workflow_pipefail.py
       - name: Effective rustc flags (default, encoder, all features)
         if: runner.os != 'Windows'
         run: |
