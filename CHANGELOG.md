@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- CI: 依存の木の検査を here-string で読む pipefail の下で `grep -q` が先に終わると一致した行を無いと読むことがあった
 - CI: `scripts/workflow_pipefail.py` (試験 `scripts/test_workflow_pipefail.py`、他の repo と同じ中身) が、pipe する `run` step が pipefail で走るかを全 workflow で確かめる 該当の step を `shell: bash` にした
 - CI: toolchain の action を上流の master から届く commit に固定した 固定していた sha は上流の branch の書き換えで届かなくなっていた
 - CI: 共有の `scripts/semver_gate.py`、`scripts/test_semver_gate.py`、`scripts/release_baseline.py`、`scripts/test_release_baseline.py` の subprocess に `encoding="utf-8"` を明示した (text mode は既定で locale の符号化で読むため) ALICE-Law の pin を今の版へ移した
