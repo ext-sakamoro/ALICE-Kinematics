@@ -4,6 +4,9 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+- bincode 2.0.1 (RUSTSEC-2025-0141、unmaintained の informational、既知の脆弱性なし) の保留を 2026-11-28 まで更新した alice-sdf の binary .asdf が使っている 版つきの読み手へ移す作業の後に消す
+
 ### Changed
 - CI: 依存の木の検査を here-string で読む pipefail の下で `grep -q` が先に終わると一致した行を無いと読むことがあった
 - CI: `scripts/workflow_pipefail.py` (試験 `scripts/test_workflow_pipefail.py`、他の repo と同じ中身) が、pipe する `run` step が pipefail で走るかを全 workflow で確かめる 該当の step を `shell: bash` にした
