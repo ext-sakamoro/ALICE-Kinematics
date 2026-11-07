@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- CI: 共有の `scripts/semver_gate.py`、`scripts/test_semver_gate.py`、`scripts/release_baseline.py`、`scripts/test_release_baseline.py` の subprocess に `encoding="utf-8"` を明示した (text mode は既定で locale の符号化で読むため) ALICE-Law の pin を今の版へ移した
 - `Skeleton::with_height` (と `default_humanoid`) の姿勢を VRM 1.0 の軸 (+Y が上、正面 +Z、本人の左が +X) の T-pose にした 骨ごとの向きの表 `BONE_DIRECTIONS` (背骨・首・頭は上、肩と腕は水平に左 +X / 右 -X、脚は下、足と爪先は前) と既存の骨の長さの積を親に足す 以前は全部の骨が +Y を向き、脚も頭の側に伸びていた 長さと親子は変わらない 頭の関節は腰から (0.18 + 0.20 + 0.12 + 0.10) · h / 1.70 上、足首は (0.42 + 0.40) · h / 1.70 下 (関節の幅で身長ではない、頭頂と足裏の関節は無い) 腰幅は無いので左右の脚は x = 0 で重なる 試験 `tests/skeleton_pose.rs` (4 本、期待値は骨の長さから手で足したもの) CI と preflight の `scripts/run_tests.sh` に `skeleton_pose=4` を足した
 
 ### Added
