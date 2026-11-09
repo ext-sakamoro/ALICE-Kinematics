@@ -44,19 +44,19 @@ fn grip_angles(amount: f32) -> Vec<u32> {
         .collect()
 }
 
-/// -0 stays -0: the helper keeps the sign of an in-range zero, and every
-/// joint range reached here includes 0 (the MCP lower limit is negative, the
-/// PIP and DIP lower limit is 0, which a comparison keeps -0 at)
+/// -0 grips like +0. oracle: ALICE-Law G2 (`-0 < +0`), which alice-det-math
+/// 0.6 `metric::clamp` follows: `clamp(-0, +0, 1)` is `+0` (det-math CHANGELOG,
+/// "clamp(-0, +0, 1) は +0"), so the amount is +0 and every joint is
+/// `max_rad * +0` = +0 (each `max_rad` is positive). Under det-math 0.5.1 the
+/// amount kept -0; that change is why `KIN_SEMANTICS_ID` folds the clamp pin.
 #[test]
-fn grip_of_negative_zero_keeps_the_sign_of_zero() {
+fn grip_of_negative_zero_is_grip_of_positive_zero() {
     let angles = grip_angles(-0.0);
     assert_eq!(angles.len(), 15);
     for (i, a) in angles.iter().enumerate() {
-        assert_eq!(*a, (-0.0_f32).to_bits(), "joint {i}: {a:#010x}");
-    }
-    for (i, a) in grip_angles(0.0).iter().enumerate() {
         assert_eq!(*a, 0.0_f32.to_bits(), "joint {i}: {a:#010x}");
     }
+    assert_eq!(grip_angles(-0.0), grip_angles(0.0));
 }
 
 /// A NaN amount gives the canonical NaN in every joint, whatever its

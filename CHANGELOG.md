@@ -5,6 +5,8 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- **Breaking** (識別子): alice-det-math を git の main (0.6) で取り、`KIN_SEMANTICS_ID` は det-math 全体の識別子でなく、この crate が呼ぶ関数 (`DET_MATH_FUNCTIONS` = clamp / max / min) の識別子 (`DET_MATH_PINS`、`assert_function_pins` で compile 時に照合) を `det-math <関数>` の名前で畳む `a16cac34…` から `edf156ec…` に (前の値は持たない: det-math 0.6 の `clamp` は ALICE-Law G2 の順で `clamp(-0, +0, 1)` が `+0` になり、`HandModel::grip(-0.0)` の関節は -0 から +0 に変わる、試験 `tests/law_max_min_ties.rs::grip_of_negative_zero_is_grip_of_positive_zero`) `KIN_SEMANTICS_BY_DET_MATH` と `semantics_id_for` を外した alice-lol (feature `lol`) も git の main で取る
+- workspace の member だった `alice-lol-robot` を alice-lol-humanoid と同じ repository に移した (依存先がそこにあるため) この repository は alice-kinematics の crate だけになり、CI の robot の test / release / clippy の step も Figure 側に移る
 - 共有 file を ALICE-Law 99dd3df4 の表の target に揃えた: `scripts/release_baseline.py` と試験 (ALICE-DetMath 001694cc、版上げを含む push では pushed commit 側の base で判定)、`scripts/test_id_move_check.py` / `scripts/entropy_guard.py` と試験 (ALICE-Analytics 6ef41bc5、許可は repo ごとの toml で、この crate の src は許可なしで 0 件) shared-files の pin と G11 の note を 99dd3df4 に上げた
 - `alice-law-conformance.toml` の G11 の note が名指す ALICE-Law の revision を shared-files の pin (5c33e32e) に揃え、id_move_check の 2 本が target に届いた現状に書き直した
 - CI: `scripts/id_move_check.py` と試験を ALICE-Analytics の版 (sha256 f75597be… / 564acfe2…) に揃えた 比べる元の commit で消えていた pin の file を「壊れた base」と読んで main が落ちていた 併せて `.github/shared-files-pin` を ALICE-Law 5c33e32 に上げ、`scripts/entropy_guard.py` / `scripts/release_baseline.py` / `scripts/semver_gate.py` とそれぞれの試験を表の行の target の bytes に揃えた

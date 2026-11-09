@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use alice_kinematics::semantics::{
-    KIN_SEMANTICS_BY_DET_MATH, KIN_SEMANTICS_CHECKED_AT, KIN_SEMANTICS_PINS,
+    DET_MATH_FUNCTIONS, DET_MATH_PINS, KIN_SEMANTICS_CHECKED_AT, KIN_SEMANTICS_PINS,
     KIN_WIRE_SEMANTICS_PINS,
 };
 use alice_kinematics::{KIN_SEMANTICS_ID, KIN_WIRE_SEMANTICS_ID};
@@ -299,9 +299,6 @@ fn check_entries(pins: &[(&str, [u8; 32])], minimum: usize) {
     let goldens = recorded_goldens();
     let mut compared = 0;
     for (name, digest) in pins {
-        if *name == "alice-det-math" {
-            continue;
-        }
         let recorded = goldens.get(*name).unwrap_or_else(|| {
             panic!("no recorded golden named {name:?} in tests/semantics_golden.rs")
         });
@@ -346,34 +343,57 @@ fn every_wire_entry_is_also_a_semantics_entry() {
     }
 }
 
-#[test]
-fn the_det_math_entry_is_the_det_math_identifier() {
-    let entry = KIN_SEMANTICS_PINS
+/// The entries `KIN_SEMANTICS_ID` folds: the scenario goldens and one
+/// `det-math <function>` entry per pinned function
+fn semantics_entries() -> Vec<(String, [u8; 32])> {
+    KIN_SEMANTICS_PINS
         .iter()
-        .find(|(name, _)| *name == "alice-det-math")
-        .expect("an alice-det-math entry");
-    assert_eq!(entry.1, alice_det_math::SEMANTICS_ID);
+        .map(|(n, d)| ((*n).to_string(), *d))
+        .chain(
+            DET_MATH_PINS
+                .iter()
+                .map(|(f, d)| (format!("det-math {f}"), *d)),
+        )
+        .collect()
+}
+
+fn fold_owned(entries: &[(String, [u8; 32])]) -> [u8; 32] {
+    let borrowed: Vec<(&str, [u8; 32])> = entries.iter().map(|(n, d)| (n.as_str(), *d)).collect();
+    fold(&borrowed)
+}
+
+#[test]
+fn the_det_math_pins_name_exactly_the_functions_called() {
+    let names: Vec<&str> = DET_MATH_PINS.iter().map(|(n, _)| *n).collect();
+    assert_eq!(names, DET_MATH_FUNCTIONS);
+    assert!(!DET_MATH_FUNCTIONS.is_empty(), "the crate calls det-math");
+    // each pin is the resolved det-math's identifier of that function
+    for (f, d) in DET_MATH_PINS {
+        assert_eq!(hex(d), hex(&alice_det_math::function_pin(f)), "{f}");
+    }
+    // the whole identifier is not folded any more
+    assert!(!KIN_SEMANTICS_PINS
+        .iter()
+        .any(|(_, d)| *d == alice_det_math::SEMANTICS_ID));
 }
 
 #[test]
 fn the_identifiers_are_the_folds_of_their_tables() {
-    assert_eq!(hex(&fold(KIN_SEMANTICS_PINS)), hex(&KIN_SEMANTICS_ID));
+    assert_eq!(
+        hex(&fold_owned(&semantics_entries())),
+        hex(&KIN_SEMANTICS_ID)
+    );
     assert_eq!(
         hex(&fold(KIN_WIRE_SEMANTICS_PINS)),
         hex(&KIN_WIRE_SEMANTICS_ID)
     );
-    let row = KIN_SEMANTICS_BY_DET_MATH
-        .iter()
-        .find(|(det, _)| *det == alice_det_math::SEMANTICS_ID)
-        .expect("a row for the resolved alice-det-math");
-    assert_eq!(row.1, KIN_SEMANTICS_ID);
 }
 
 #[test]
 fn the_identifiers_are_the_recorded_values() {
     assert_eq!(
         hex(&KIN_SEMANTICS_ID),
-        "a16cac343ab3962e3431c2cd753ecc7365df090c48abc5e4dae294471040f5d5"
+        "edf156ec3f794d7a30dd996b7c4b7a484172650c4c02c93c899522863fbebc77"
     );
     assert_eq!(
         hex(&KIN_WIRE_SEMANTICS_ID),
@@ -383,7 +403,11 @@ fn the_identifiers_are_the_recorded_values() {
 
 #[test]
 fn one_changed_bit_in_any_entry_changes_the_identifier() {
-    for table in [KIN_SEMANTICS_PINS, KIN_WIRE_SEMANTICS_PINS] {
+    let sem: Vec<(&str, [u8; 32])> = semantics_entries()
+        .iter()
+        .map(|(n, d)| (Box::leak(n.clone().into_boxed_str()) as &str, *d))
+        .collect();
+    for table in [sem.as_slice(), KIN_WIRE_SEMANTICS_PINS] {
         let id = fold(table);
         for i in 0..table.len() {
             let mut entries = table.to_vec();

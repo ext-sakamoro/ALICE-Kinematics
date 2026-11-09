@@ -9,9 +9,11 @@
 //!   Two builds with the same value read the same bytes as the same intents.
 //! - [`KIN_SEMANTICS_ID`]: the arithmetic this build computes intents with.
 //!   It folds every recorded scenario (the packet format, the quintic
-//!   trajectory and the arm inverse kinematics) and the identifier of
-//!   `alice-det-math`, whose helpers the crate calls. Two builds with the same
-//!   value compute every pinned scenario to the same bits.
+//!   trajectory and the arm inverse kinematics) and the identifier of each
+//!   `alice-det-math` function the crate calls ([`DET_MATH_PINS`]), not
+//!   det-math's whole identifier, so a function it does not call moves
+//!   nothing. Two builds with the same value compute every pinned scenario to
+//!   the same bits.
 //!
 //! The stream hello frame ([`crate::stream`]) carries both: a reader checks
 //! the wire identifier before it decodes stored packets (the meaning of the
@@ -23,13 +25,14 @@
 //! The procedure of the `SEMANTICS_ID` fold of `alice-det-math`: sort the
 //! entries by name (ascending byte order), then SHA-256 over, for each entry
 //! in that order, the name length as 4 bytes big-endian (`u32`), the name
-//! bytes and the 32 digest bytes.
+//! bytes and the 32 digest bytes. A [`DET_MATH_PINS`] entry goes in under the
+//! name `det-math <function>`.
 //!
-//! # Hex form (with `alice-det-math` 0.5.1)
+//! # Hex form
 //!
 //! ```text
 //! KIN_WIRE_SEMANTICS_ID d5ae6ab1fdf22312e9c0c6a99d1ea6ab26c218897d2ae045658bfe3decef31ca
-//! KIN_SEMANTICS_ID      a16cac343ab3962e3431c2cd753ecc7365df090c48abc5e4dae294471040f5d5
+//! KIN_SEMANTICS_ID      edf156ec3f794d7a30dd996b7c4b7a484172650c4c02c93c899522863fbebc77
 //! ```
 //!
 //! # Independent of cargo features
@@ -41,15 +44,16 @@
 //!
 //! [`KIN_SEMANTICS_CHECKED_AT`] names the crate version and toolchain the pins
 //! were last checked on; a different version or toolchain fails
-//! `tests/kin_semantics_id.rs` until they are checked again. An
-//! `alice-det-math` generation with no row in [`KIN_SEMANTICS_BY_DET_MATH`]
-//! does not compile.
+//! `tests/kin_semantics_id.rs` until they are checked again. Each
+//! [`DET_MATH_PINS`] entry is compared at compile time with the resolved
+//! `alice-det-math` (`assert_function_pins`): a moved function does not
+//! compile.
 //!
 //! # Checked by
 //!
 //! `tests/kin_semantics_id.rs` reads every digest from the golden test that
-//! records it (the source, not a copy), checks that the det-math entry equals
-//! `alice_det_math::SEMANTICS_ID` and recomputes both folds. Re-recording
+//! records it (the source, not a copy), checks that [`DET_MATH_FUNCTIONS`] is
+//! the set [`DET_MATH_PINS`] names and recomputes both folds. Re-recording
 //! order after an intended change: update the golden first, then the entry
 //! here, then the identifiers.
 
@@ -96,9 +100,8 @@ pub const KIN_WIRE_SEMANTICS_PINS: &[(&str, [u8; 32])] = &[
 pub const KIN_WIRE_SEMANTICS_ID: [u8; 32] =
     hex32("d5ae6ab1fdf22312e9c0c6a99d1ea6ab26c218897d2ae045658bfe3decef31ca");
 
-/// The entries [`KIN_SEMANTICS_ID`] folds: every recorded-bit scenario of
-/// `tests/semantics_golden.rs` plus `"alice-det-math"` holding
-/// `alice_det_math::SEMANTICS_ID`
+/// The entries [`KIN_SEMANTICS_ID`] folds besides [`DET_MATH_PINS`]: every
+/// recorded-bit scenario of `tests/semantics_golden.rs`
 pub const KIN_SEMANTICS_PINS: &[(&str, [u8; 32])] = &[
     (
         "intent encode",
@@ -120,30 +123,43 @@ pub const KIN_SEMANTICS_PINS: &[(&str, [u8; 32])] = &[
         "arm inverse kinematics",
         hex32("38be74d7e546d5e69a4e89236fe6a670804f5f6ead3cfeb62763a630746900c2"),
     ),
-    // the resolved alice-det-math's own identifier, not a copy of it: the
-    // identifier below is looked up by it
-    ("alice-det-math", alice_det_math::SEMANTICS_ID),
 ];
+
+/// The functions of `alice-det-math` this crate calls (ALICE-Law's
+/// `scripts/fold_set_check.py` compares this with the calls in the source)
+pub const DET_MATH_FUNCTIONS: &[&str] = &["clamp", "max", "min"];
+
+/// The identifier of each function of [`DET_MATH_FUNCTIONS`], in that order, as
+/// recorded when [`KIN_SEMANTICS_ID`] was computed. They are folded under the
+/// name `det-math <function>`. A function whose identifier moves in the
+/// resolved `alice-det-math` stops the compile, rather than reporting an
+/// identifier computed from other bits; a function this crate does not call
+/// moves nothing.
+pub const DET_MATH_PINS: &[(&str, [u8; 32])] = &[
+    (
+        "clamp",
+        hex32("8a35afd329a733bcd0c771a8921fbf21a82491954fc8293881220944dc820455"),
+    ),
+    (
+        "max",
+        hex32("8bd32fcb313f7fb3d7a699fc3075273de7e5a4e083912d8dc7f4cc4016fc2286"),
+    ),
+    (
+        "min",
+        hex32("2939e83813b26c868ec3113fb1c25102f16f28d8f24c343a727d4b1bec5904fe"),
+    ),
+];
+
+const _: () = alice_det_math::assert_function_pins(DET_MATH_PINS);
 
 /// The crate version and toolchain the pins were last checked against
 pub const KIN_SEMANTICS_CHECKED_AT: (&str, &str) = ("0.4.0", "1.98.1");
 
-/// [`KIN_SEMANTICS_ID`] for each `alice-det-math` generation this crate
-/// knows: `(alice_det_math::SEMANTICS_ID, fold of KIN_SEMANTICS_PINS with that
-/// det-math entry)`. A build against a generation with no row does not
-/// compile, rather than reporting an identifier of another generation.
-pub const KIN_SEMANTICS_BY_DET_MATH: &[([u8; 32], [u8; 32])] = &[
-    // alice-det-math 0.5.1
-    (
-        hex32("85e0884623b154a3b2b264374907b6cbac09307ca3f9a08339e48c567d3cb315"),
-        hex32("a16cac343ab3962e3431c2cd753ecc7365df090c48abc5e4dae294471040f5d5"),
-    ),
-];
-
 /// Content hash of this crate's arithmetic: the fold of
-/// [`KIN_SEMANTICS_PINS`], taken from [`KIN_SEMANTICS_BY_DET_MATH`] by the
-/// resolved `alice-det-math`
-pub const KIN_SEMANTICS_ID: [u8; 32] = semantics_id_for(&alice_det_math::SEMANTICS_ID);
+/// [`KIN_SEMANTICS_PINS`] and [`DET_MATH_PINS`] (each under `det-math
+/// <function>`) described in the [module documentation](self)
+pub const KIN_SEMANTICS_ID: [u8; 32] =
+    hex32("edf156ec3f794d7a30dd996b7c4b7a484172650c4c02c93c899522863fbebc77");
 
 /// Earlier values of [`KIN_SEMANTICS_ID`] whose builds compute every pinned
 /// scenario to the same bits as this one (none yet)
@@ -152,25 +168,6 @@ pub const KIN_PREVIOUS_SEMANTICS_IDS: &[[u8; 32]] = &[];
 /// Earlier values of [`KIN_WIRE_SEMANTICS_ID`] whose packets this build reads
 /// as the same intents (none yet)
 pub const KIN_PREVIOUS_WIRE_SEMANTICS_IDS: &[[u8; 32]] = &[];
-
-/// The [`KIN_SEMANTICS_ID`] of a build that resolved the `alice-det-math`
-/// with identifier `det_math`.
-///
-/// # Panics
-///
-/// When [`KIN_SEMANTICS_BY_DET_MATH`] has no row for `det_math` (in a const
-/// context this stops the compile).
-#[must_use]
-pub const fn semantics_id_for(det_math: &[u8; 32]) -> [u8; 32] {
-    let mut i = 0;
-    while i < KIN_SEMANTICS_BY_DET_MATH.len() {
-        if same32(&KIN_SEMANTICS_BY_DET_MATH[i].0, det_math) {
-            return KIN_SEMANTICS_BY_DET_MATH[i].1;
-        }
-        i += 1;
-    }
-    panic!("alice-det-math SEMANTICS_ID has no row in KIN_SEMANTICS_BY_DET_MATH: add its fold");
-}
 
 pub(crate) const fn same32(a: &[u8; 32], b: &[u8; 32]) -> bool {
     let mut i = 0;

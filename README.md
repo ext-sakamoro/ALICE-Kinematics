@@ -64,11 +64,9 @@ let lol_intent = grasp(0, HandSide::Right, 3.0);
 let intents = intent_to_kinematics(&lol_intent, &positions).unwrap();
 ```
 
-### alice-lol-robot (workspace member)
+### alice-lol-robot
 
-- `alice-lol-robot/` — LOL の Phase 3 intent verb を humanoid の FK と 8-byte の Kinematics packet にする template (alice-lol / alice-lol-humanoid / alice-kinematics の `lol`)
-- examples: `robot_grasp` / `robot_walk` / `robot_dance` (`cargo run -p alice-lol-robot --example robot_grasp`)
-- alice-lol と alice-lol-humanoid は git の rev で取る
+- 0.4.0 で alice-lol-humanoid と同じ repository に移した この crate は packet の型 (`Intent` など) を提供する側
 
 ## Quick Start
 
