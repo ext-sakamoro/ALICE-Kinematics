@@ -411,7 +411,7 @@ impl ArmChain {
             for i in (0..MAX_JOINTS).rev() {
                 const SING_THRESH_SQ: f32 = 1e-8; // (0.1 mm)²
 
-                let joint_pos = self.joint_position(i);
+                let joint_pos = self.pivot(i);
                 // Re-evaluate end-effector after each joint update so that
                 // downstream joints benefit from the change immediately.
                 let end_pos = self.forward_kinematics();
@@ -471,7 +471,19 @@ impl ArmChain {
         (max_iter, error)
     }
 
-    /// Get world-space position of joint i
+    /// Where joint i turns: the start of link i (`base` for the first joint). Joint i
+    /// turns the direction and link i then follows it, so turning joint i moves link i
+    /// about its start; [`Self::joint_position`] is that link's end.
+    fn pivot(&self, joint_idx: usize) -> Vec3k {
+        if joint_idx == 0 {
+            canon3(self.base)
+        } else {
+            self.joint_position(joint_idx - 1)
+        }
+    }
+
+    /// World-space position at the end of link i (the point joint i's link reaches, which is
+    /// where joint i + 1 turns).
     #[must_use]
     pub fn joint_position(&self, joint_idx: usize) -> Vec3k {
         let mut pos = self.base;

@@ -1,6 +1,6 @@
 [package]
 name = "alice-kinematics"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 authors = ["Moroya Sakamoto <sakamoro@alicelaw.net>"]
 description = "Human motion intent compression — 1000Hz raw coordinates → 8-byte kinematic intent"

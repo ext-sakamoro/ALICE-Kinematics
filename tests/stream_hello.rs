@@ -150,6 +150,36 @@ fn only_the_semantics_identifier_changed_is_a_semantics_mismatch() {
     }
 }
 
+// The identifier of 0.3.x, whose CCD turned each joint about the end of its link: its arm inverse
+// kinematics gives other bits, so it is not a previous identifier and its streams are refused.
+const KIN_0_3_SEMANTICS_ID: [u8; 32] = [
+    0x44, 0x0a, 0x6e, 0x99, 0x2e, 0x9d, 0x96, 0x97, 0xf9, 0x02, 0x61, 0x54, 0xd6, 0x8a, 0xaa, 0xa1,
+    0x4e, 0x40, 0x94, 0xb3, 0x17, 0xa6, 0x63, 0x08, 0xf6, 0xbc, 0xcd, 0xfe, 0x43, 0xd4, 0xdf, 0x63,
+];
+
+#[test]
+fn a_stream_from_a_0_3_producer_is_refused_with_both_identifiers() {
+    assert_ne!(KIN_0_3_SEMANTICS_ID, KIN_SEMANTICS_ID);
+    let mut hello = StreamHello::current(PacketKind::Intent);
+    hello.semantics_id = KIN_0_3_SEMANTICS_ID;
+    let bytes = stream_of(&hello.encode(), &sample_intents());
+    for policy in [HelloPolicy::AcceptUnpinned, HelloPolicy::RequirePinned] {
+        let err = open_stream(&bytes, policy).unwrap_err();
+        assert_eq!(
+            err,
+            StreamError::SemanticsMismatch {
+                stored: KIN_0_3_SEMANTICS_ID,
+                running: KIN_SEMANTICS_ID
+            }
+        );
+        let msg = err.to_string();
+        assert!(
+            msg.contains("440a6e992e9d9697f9026154d68aaaa14e4094b317a66308f6bccdfe43d4df63"),
+            "{msg}"
+        );
+    }
+}
+
 #[test]
 fn a_mismatch_message_names_both_identifiers() {
     let hex = |id: &[u8; 32]| {

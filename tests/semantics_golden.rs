@@ -147,10 +147,12 @@ fn arm_inverse_kinematics_is_the_recorded_bits() {
             out.extend_from_slice(&c.to_bits().to_le_bytes());
         }
     }
+    // re-recorded for 0.4.0: the CCD turns each joint about the start of its link (it used the
+    // end, which moved every chain whose turning joints carry a bone, the arm's elbow and wrist)
     assert_golden(
         "arm inverse kinematics",
         &out,
-        "287771cc5d7cf2d0bdf00c95c8067f0b2154d3bc069a9ee8d8cca82343d44469",
+        "38be74d7e546d5e69a4e89236fe6a670804f5f6ead3cfeb62763a630746900c2",
     );
 }
 

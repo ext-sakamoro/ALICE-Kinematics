@@ -23,7 +23,7 @@ alice-det-math = { version = "0.5.1", default-features = false }
 
 # Kinematics 8-byte Intent packet bridge (default on、本 crate の主目的)
 # alice-kinematics はこの repository の root の crate
-alice-kinematics = { path = "..", version = ">=0.2, <0.4", default-features = false, features = ["lol", "std"], optional = true }
+alice-kinematics = { path = "..", version = ">=0.2, <0.5", default-features = false, features = ["lol", "std"], optional = true }
 
 [features]
 default = ["kinematics"]

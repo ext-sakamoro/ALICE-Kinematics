@@ -29,7 +29,7 @@
 //!
 //! ```text
 //! KIN_WIRE_SEMANTICS_ID d5ae6ab1fdf22312e9c0c6a99d1ea6ab26c218897d2ae045658bfe3decef31ca
-//! KIN_SEMANTICS_ID      440a6e992e9d9697f9026154d68aaaa14e4094b317a66308f6bccdfe43d4df63
+//! KIN_SEMANTICS_ID      a16cac343ab3962e3431c2cd753ecc7365df090c48abc5e4dae294471040f5d5
 //! ```
 //!
 //! # Independent of cargo features
@@ -118,7 +118,7 @@ pub const KIN_SEMANTICS_PINS: &[(&str, [u8; 32])] = &[
     ),
     (
         "arm inverse kinematics",
-        hex32("287771cc5d7cf2d0bdf00c95c8067f0b2154d3bc069a9ee8d8cca82343d44469"),
+        hex32("38be74d7e546d5e69a4e89236fe6a670804f5f6ead3cfeb62763a630746900c2"),
     ),
     // the resolved alice-det-math's own identifier, not a copy of it: the
     // identifier below is looked up by it
@@ -126,7 +126,7 @@ pub const KIN_SEMANTICS_PINS: &[(&str, [u8; 32])] = &[
 ];
 
 /// The crate version and toolchain the pins were last checked against
-pub const KIN_SEMANTICS_CHECKED_AT: (&str, &str) = ("0.3.0", "1.98.1");
+pub const KIN_SEMANTICS_CHECKED_AT: (&str, &str) = ("0.4.0", "1.98.1");
 
 /// [`KIN_SEMANTICS_ID`] for each `alice-det-math` generation this crate
 /// knows: `(alice_det_math::SEMANTICS_ID, fold of KIN_SEMANTICS_PINS with that
@@ -136,7 +136,7 @@ pub const KIN_SEMANTICS_BY_DET_MATH: &[([u8; 32], [u8; 32])] = &[
     // alice-det-math 0.5.1
     (
         hex32("85e0884623b154a3b2b264374907b6cbac09307ca3f9a08339e48c567d3cb315"),
-        hex32("440a6e992e9d9697f9026154d68aaaa14e4094b317a66308f6bccdfe43d4df63"),
+        hex32("a16cac343ab3962e3431c2cd753ecc7365df090c48abc5e4dae294471040f5d5"),
     ),
 ];
 

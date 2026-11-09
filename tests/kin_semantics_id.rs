@@ -373,7 +373,7 @@ fn the_identifiers_are_the_folds_of_their_tables() {
 fn the_identifiers_are_the_recorded_values() {
     assert_eq!(
         hex(&KIN_SEMANTICS_ID),
-        "440a6e992e9d9697f9026154d68aaaa14e4094b317a66308f6bccdfe43d4df63"
+        "a16cac343ab3962e3431c2cd753ecc7365df090c48abc5e4dae294471040f5d5"
     );
     assert_eq!(
         hex(&KIN_WIRE_SEMANTICS_ID),
