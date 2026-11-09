@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- 共有 file を ALICE-Law 99dd3df4 の表の target に揃えた: `scripts/release_baseline.py` と試験 (ALICE-DetMath 001694cc、版上げを含む push では pushed commit 側の base で判定)、`scripts/test_id_move_check.py` / `scripts/entropy_guard.py` と試験 (ALICE-Analytics 6ef41bc5、許可は repo ごとの toml で、この crate の src は許可なしで 0 件) shared-files の pin と G11 の note を 99dd3df4 に上げた
 - `alice-law-conformance.toml` の G11 の note が名指す ALICE-Law の revision を shared-files の pin (5c33e32e) に揃え、id_move_check の 2 本が target に届いた現状に書き直した
 - CI: `scripts/id_move_check.py` と試験を ALICE-Analytics の版 (sha256 f75597be… / 564acfe2…) に揃えた 比べる元の commit で消えていた pin の file を「壊れた base」と読んで main が落ちていた 併せて `.github/shared-files-pin` を ALICE-Law 5c33e32 に上げ、`scripts/entropy_guard.py` / `scripts/release_baseline.py` / `scripts/semver_gate.py` とそれぞれの試験を表の行の target の bytes に揃えた
 - **Breaking** (識別子、0.4.0): `ArmChain::inverse_kinematics` (CCD) は各関節を自分の骨の根元で回す (前は `joint_position(i)` = 骨 i の先端を中心にしていた) 骨を持つ関節を回す鎖 (腰 + 膝など) は届く目標に届かなかった (試験 `ccd_reaches_a_reachable_target_when_the_turning_joints_have_length`、前は 0.089 m 残る) 腕の IK の bits も変わるので `KIN_SEMANTICS_ID` は `440a6e99…` から `a16cac34…` に変わり、前の識別子は前の値として持たない (bits が違う) 0.3.x の producer の stream は `StreamError::SemanticsMismatch` で受けない `KIN_WIRE_SEMANTICS_ID` (packet の形) は不変 `joint_position` は変えず、doc を「骨 i の先端」に直した
