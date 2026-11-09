@@ -40,7 +40,7 @@
 )]
 
 use alice_kinematics::intent::Intent;
-use alice_kinematics::joint::{rotate_vec, ArmChain, JointConstraint, Vec3k};
+use alice_kinematics::joint::{rotate_vec, ArmChain, Joint, JointConstraint, Vec3k};
 use alice_kinematics::predictor::{Predictor, QuinticCoeffs};
 use alice_kinematics::skeleton::{BoneId, Skeleton};
 
@@ -353,6 +353,36 @@ fn ccd_inverse_kinematics_reaches_a_reachable_target_and_converges_with_iteratio
         err < 3.0 - reach + 0.15,
         "should stretch towards an unreachable target ({err})"
     );
+}
+
+// A leg: hip and knee each carry their own bone (length 0.45 m), unlike the arm whose
+// shoulder joints have length 0. Joint i turns the direction and then link i follows, so
+// the pivot of joint i is where link i starts, not where it ends.
+fn leg() -> ArmChain {
+    let free = JointConstraint::new(-179.0, 179.0);
+    let z = Vec3k::new(0.0, 0.0, 1.0);
+    let mut joints = [Joint::new(b"none", z, 0.0, free); 7];
+    joints[0] = Joint::new(b"hip", z, 0.45, free);
+    joints[1] = Joint::new(b"knee", z, 0.45, free);
+    ArmChain {
+        joints,
+        base: Vec3k::ZERO,
+    }
+}
+
+#[test]
+fn ccd_reaches_a_reachable_target_when_the_turning_joints_have_length() {
+    // reachable by construction: the tip at hip 0.4 rad, knee 0.9 rad (a bent leg)
+    let mut posed = leg();
+    posed.set_angles(&[0.4, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0]);
+    let target = posed.forward_kinematics();
+    let mut l = leg();
+    let (_, err) = l.inverse_kinematics(target, 256, 1e-4);
+    assert!(
+        err < 0.01,
+        "CCD residual {err} m on a reachable 2-bone target"
+    );
+    assert!((l.forward_kinematics().distance(target) - err).abs() < 1e-6);
 }
 
 // ───────────────────────── predictor / fitter ─────────────────────────────
