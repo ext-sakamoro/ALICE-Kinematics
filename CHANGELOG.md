@@ -5,7 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Changed
-- CI: `scripts/id_move_check.py` と試験を ALICE-Analytics の版 (sha256 f75597be… / 564acfe2…) に揃えた 比べる元の commit で消えていた pin の file を「壊れた base」と読んで main が落ちていた
+- CI: `scripts/id_move_check.py` と試験を ALICE-Analytics の版 (sha256 f75597be… / 564acfe2…) に揃えた 比べる元の commit で消えていた pin の file を「壊れた base」と読んで main が落ちていた 併せて `.github/shared-files-pin` を ALICE-Law 5c33e32 に上げ、`scripts/entropy_guard.py` / `scripts/release_baseline.py` / `scripts/semver_gate.py` とそれぞれの試験を表の行の target の bytes に揃えた
 - **Breaking** (識別子、0.4.0): `ArmChain::inverse_kinematics` (CCD) は各関節を自分の骨の根元で回す (前は `joint_position(i)` = 骨 i の先端を中心にしていた) 骨を持つ関節を回す鎖 (腰 + 膝など) は届く目標に届かなかった (試験 `ccd_reaches_a_reachable_target_when_the_turning_joints_have_length`、前は 0.089 m 残る) 腕の IK の bits も変わるので `KIN_SEMANTICS_ID` は `440a6e99…` から `a16cac34…` に変わり、前の識別子は前の値として持たない (bits が違う) 0.3.x の producer の stream は `StreamError::SemanticsMismatch` で受けない `KIN_WIRE_SEMANTICS_ID` (packet の形) は不変 `joint_position` は変えず、doc を「骨 i の先端」に直した
 - `Skeleton::with_height` (と `default_humanoid`) の姿勢を VRM 1.0 の軸 (+Y が上、正面 +Z、本人の左が +X) の T-pose にした 骨ごとの向きの表 `BONE_DIRECTIONS` (背骨・首・頭は上、肩と腕は水平に左 +X / 右 -X、脚は下、足と爪先は前) と既存の骨の長さの積を親に足す 以前は全部の骨が +Y を向き、脚も頭の側に伸びていた 長さと親子は変わらない 頭の関節は腰から (0.18 + 0.20 + 0.12 + 0.10) · h / 1.70 上、足首は (0.42 + 0.40) · h / 1.70 下 (関節の幅で身長ではない、頭頂と足裏の関節は無い) 腰幅は無いので左右の脚は x = 0 で重なる 試験 `tests/skeleton_pose.rs` (4 本、期待値は骨の長さから手で足したもの) CI と preflight の `scripts/run_tests.sh` に `skeleton_pose=4` を足した
 

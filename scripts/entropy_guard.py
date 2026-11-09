@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """No deterministic path of the crate draws OS entropy or reads the wall clock.
 
-This crate's production code must never make a value it computes (a pose, a
-fitted trajectory, an encoded intent) depend on OS randomness or the wall
-clock: the same samples would then give different bits on another run.
+An estimate this crate computes (a quantile, a cardinality, a noisy count) is
+meant to compare equal given the same input, on any machine, at any time, so
+no part of production code may depend on the wall clock or on OS randomness:
+either one would make the same input produce a different estimate on a
+different run. Randomness a caller wants belongs to the caller, passed in
+explicitly (`XorShift64::new(seed)` / `with_seed` / `with_probability` /
+`with_seed_params`); this crate's own production code never reaches for it on
+its own, except the one deprecated path documented below.
 
 Checked in every src/**/*.rs file, outside `#[cfg(test)]` / `#[cfg(all(test,
 ...))]` modules, with the code of a file joined (a call split over lines still
@@ -16,15 +21,14 @@ as the plain form:
     `::new`: `::default()` reaches the same OS-seeded hasher)  Uuid::new_v4
 
 clippy's `disallowed-methods` in clippy.toml is the first layer (compiled,
-`cargo clippy --all-targets -- -D warnings`); this script is the second,
-readable without compiling and run on `src/` only (clippy's `--all-targets`
-also covers tests/benches/examples, where a scoped
-`#[allow(clippy::disallowed_methods, reason = "...")]` carries the same
-per-call-site accounting this script does).
+`cargo clippy --all-targets -D warnings`); this script is the second, readable
+without compiling and run on `src/` only (clippy's `--all-targets` also covers
+tests/benches/examples/fuzz, where a scoped `#[allow(clippy::disallowed_methods,
+reason = "...")]` carries the same per-call-site accounting this script does).
 
-Deliberately not scanned: `HashMap` / `HashSet` (iteration order, ALICE-Law
-G13), which scripts/order_guard.py checks; this module is also the source
-reader it imports (`production_lines`).
+Deliberately not scanned: `HashMap` / `HashSet` (their default hasher also
+seeds from OS randomness, but that is a separate gate -- iteration order, not
+entropy in a value -- this crate has no HashMap/HashSet in src/ today).
 
 A definition (`fn from_entropy`) is not a call. ALLOWED lists the call sites
 that stay, each with its reason and exact count: a count that drifts either
@@ -69,7 +73,7 @@ ALIASABLE = {
     "SystemTime": ("SystemTime::now", r"\b{}\b" + _QUALIFIED_SELF + r"::\s*now\b"),
 }
 ALIAS_RE = re.compile(r"\b(Instant|SystemTime)\s+as\s+(\w+)")
-# (file, pattern) -> (count, reason)
+# (file, pattern) -> (count, reason); empty: no call site in src/ is allowed
 ALLOWED: dict[tuple[str, str], tuple[int, str]] = {}
 # A char literal ('{', '\n', '\u{1F600}', also after a `b` prefix) but not a
 # lifetime ('a, 'static: those have no closing quote, so they never match.

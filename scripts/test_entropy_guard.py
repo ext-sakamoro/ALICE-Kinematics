@@ -55,12 +55,12 @@ class EntropyGuard(unittest.TestCase):
         eg.ALLOWED.update(self._allowed)
         problems, files, patterns = eg.check(ROOT)
         self.assertEqual(problems, [])
-        self.assertGreaterEqual(files, 15)
+        self.assertGreater(files, 5)
         self.assertEqual(patterns, len(eg.PATTERNS))
 
     def test_every_source_in_production_code_is_reported(self):
         for call in ["getrandom::getrandom(&mut b)", "rand::rngs::OsRng", "rand::thread_rng()",
-                     "rand::random::<u64>()", "SecureRng::from_entropy()", "DpNoise::try_from_entropy(1.0, 1.0)",
+                     "rand::random::<u64>()", "XorShift64::from_entropy()", "Rng::try_from_entropy(1.0, 1.0)",
                      "std::time::SystemTime::now()", "std::time::Instant::now()",
                      "std::collections::hash_map::RandomState::new()", "uuid::Uuid::new_v4()"]:
             p = self.problems({"src/a.rs": f"pub fn f() {{ let _ = {call}; }}\n"})
@@ -71,16 +71,18 @@ class EntropyGuard(unittest.TestCase):
         self.assertEqual(self.problems({"src/a.rs": src}), [])
 
     def test_a_cfg_all_test_module_is_exempt(self):
-        # This crate's own convention (src/ffi.rs): #[cfg(all(test, feature = "std"))]
         src = ('pub fn f() {}\n\n#[cfg(all(test, feature = "std"))]\nmod tests {\n'
                '    fn t() {\n        let _ = std::time::Instant::now();\n    }\n}\n')
         self.assertEqual(self.problems({"src/a.rs": src}), [])
 
     def test_cfg_not_test_is_not_exempt(self):
-        # #[cfg(not(test))] must not be mistaken for a test-module marker
-        src = ('#[cfg(not(test))]\npub fn f() { let _ = std::time::Instant::now(); }\n')
+        # `not(test)` contains the word "test" but means the opposite of it; a
+        # regex keyed on the substring "test" would wrongly treat this as a
+        # test module and hide a real production call.
+        src = ('pub fn f() {}\n\n#[cfg(not(test))]\nmod prod_only {\n'
+               '    fn t() {\n        let _ = std::time::Instant::now();\n    }\n}\n')
         p = self.problems({"src/a.rs": src})
-        self.assertEqual(len(p), 1, p)
+        self.assertTrue(any("Instant::now" in x for x in p), p)
 
     def test_code_after_a_test_module_is_checked_again(self):
         src = "#[cfg(test)]\nmod tests {\n    fn t() {}\n}\n\npub fn f() { let _ = rand::thread_rng(); }\n"
