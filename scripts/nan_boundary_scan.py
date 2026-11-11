@@ -60,6 +60,8 @@ EXEMPT = {
                                   "output is canonical",
     "distance_based_skinning": "every weight is 0, 1 or 1 / (d² + 1e-6) over the sum of such terms: "
                                "a NaN distance fails `< f32::MAX` and weighs 0, so no NaN can leave it",
+    "distance_based_skinning_bones": "every weight is 0, 1 or 1 / (d² + 1e-6) over the sum of such terms: "
+                                     "a NaN distance is skipped before the top 4, so no NaN can leave it",
     "Skeleton::find_joint": "returns a reference to a joint as stored; every crate computation that "
                             "stores into a joint canonicalises (with_height, rescale, hypothesis_to_skeleton, "
                             "auto_rig_on_sphere), the rest is the caller's own write through the pub fields",

@@ -8,7 +8,7 @@
 //! asserts that a NaN does come out (so the test is not vacuous), and that every NaN that
 //! comes out has the canonical bits. The release build once turned a NaN's sign bit on
 //! inside the arm IK (`src/joint.rs`), so these run under debug and release on `x86_64` and
-//! `aarch64` (`scripts/run_tests.sh nan_boundaries=50` in each leg; 59 with `encoder`, 51 with
+//! `aarch64` (`scripts/run_tests.sh nan_boundaries=53` in each leg; 62 with `encoder`, 54 with
 //! `lol`).
 
 use alice_kinematics::autorig::hypothesis::{
@@ -20,6 +20,7 @@ use alice_kinematics::autorig::slice::{
 };
 use alice_kinematics::autorig::sphere::{auto_rig_on_sphere, SphereContext, TangentFrame};
 use alice_kinematics::autorig::{auto_rig, AutoRigConfig, MeshView};
+use alice_kinematics::bones::{BoneClass, BoneOffsets, BoneSkeleton, WorldBone};
 use alice_kinematics::hand::{Finger, FingerType, HandModel};
 use alice_kinematics::joint::rotate_vec;
 use alice_kinematics::predictor::QuinticCoeffs;
@@ -762,4 +763,58 @@ mod lol {
         let values: Vec<f32> = intents.iter().flat_map(|i| v3(i.target)).collect();
         assert_canonical("intent_to_kinematics", &values);
     }
+}
+
+fn nan_bones() -> BoneSkeleton {
+    BoneSkeleton::from_world(
+        vec![WorldBone {
+            name: "a".to_string(),
+            parent: None,
+            head: nan3(),
+            tail: nan3(),
+            class: BoneClass::Torso,
+        }],
+        odd_nan(),
+    )
+    .unwrap()
+}
+
+#[test]
+fn boundary_bone_head() {
+    assert_canonical("Bone::head", &v3(nan_bones().bone(0).unwrap().head()));
+    // through forward kinematics too: a NaN offset reaches the head
+    let s = BoneSkeleton::from_offsets(
+        vec![BoneOffsets {
+            name: "a".to_string(),
+            parent: None,
+            head_offset: nan3(),
+            tail_offset: Vec3k::ZERO,
+            class: BoneClass::Torso,
+        }],
+        1.0,
+    )
+    .unwrap();
+    assert_canonical("Bone::head (offsets)", &v3(s.bone(0).unwrap().head()));
+}
+
+#[test]
+fn boundary_bone_tail() {
+    assert_canonical("Bone::tail", &v3(nan_bones().bone(0).unwrap().tail()));
+    let s = BoneSkeleton::from_offsets(
+        vec![BoneOffsets {
+            name: "a".to_string(),
+            parent: None,
+            head_offset: Vec3k::ZERO,
+            tail_offset: nan3(),
+            class: BoneClass::Torso,
+        }],
+        1.0,
+    )
+    .unwrap();
+    assert_canonical("Bone::tail (offsets)", &v3(s.bone(0).unwrap().tail()));
+}
+
+#[test]
+fn boundary_boneskeleton_height() {
+    assert_canonical("BoneSkeleton::height", &[nan_bones().height()]);
 }
