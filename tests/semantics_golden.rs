@@ -9,8 +9,13 @@
 //! These are change detectors, not correctness oracles: the analytic checks of
 //! the same functions are in `tests/analytic_oracle.rs`.
 
+use alice_kinematics::autorig::{
+    distance_based_skinning, distance_based_skinning_bones, InfluenceRadii, MeshView,
+};
+use alice_kinematics::bones::{BoneClass, BoneOffsets, BoneSkeleton};
 use alice_kinematics::intent::ExtendedIntent;
 use alice_kinematics::predictor::QuinticCoeffs;
+use alice_kinematics::skeleton::Skeleton;
 use alice_kinematics::{ArmChain, Intent, IntentFlags, IntentType, Vec3k};
 use sha2::{Digest, Sha256};
 
@@ -184,5 +189,76 @@ fn packet_decode_is_the_recorded_bits() {
         "packet decode",
         &out,
         "31ff5fcd3686b9d00bb0a9946ed9b899aa0ce4cc22ec556d332cec3030a2bc98",
+    );
+}
+
+/// Distance skinning: the 22-joint humanoid through both entries (`Skeleton` and its named-bone
+/// preset) and a named-bone rig with a support bone and a 12-bone chain, over a lattice of
+/// points; the bone indices and weight bits of every vertex
+#[test]
+fn distance_skinning_is_the_recorded_bits() {
+    let mut verts = Vec::new();
+    for ix in -12..=12_i16 {
+        for iy in -20..=16_i16 {
+            for iz in -4..=4_i16 {
+                verts.push(Vec3k::new(
+                    f32::from(ix) * 0.05,
+                    f32::from(iy) * 0.05,
+                    f32::from(iz) * 0.05,
+                ));
+            }
+        }
+    }
+    let mesh = MeshView::from_vertices(&verts);
+    let r = InfluenceRadii::default();
+    let mut rig = vec![
+        BoneOffsets {
+            name: "root".to_string(),
+            parent: None,
+            head_offset: Vec3k::new(0.0, 0.0, 0.0),
+            tail_offset: Vec3k::new(0.0, 0.3, 0.0),
+            class: BoneClass::Torso,
+        },
+        BoneOffsets {
+            name: "support".to_string(),
+            parent: Some(0),
+            head_offset: Vec3k::new(0.05, -0.1, 0.0),
+            tail_offset: Vec3k::new(0.25, 0.0, 0.0),
+            class: BoneClass::Limb,
+        },
+    ];
+    for k in 0..12_u8 {
+        rig.push(BoneOffsets {
+            name: format!("chain_{k}"),
+            parent: Some(if k == 0 { 0 } else { usize::from(k) + 1 }),
+            head_offset: Vec3k::new(0.0, 0.0, 0.0),
+            tail_offset: Vec3k::new(0.04, -0.03, 0.01),
+            class: if k % 2 == 0 {
+                BoneClass::Limb
+            } else {
+                BoneClass::Torso
+            },
+        });
+    }
+    let rig = BoneSkeleton::from_offsets(rig, 1.70).expect("rig");
+    let mut out = Vec::new();
+    for k in [
+        distance_based_skinning(&mesh, &Skeleton::with_height(1.70), &r),
+        distance_based_skinning_bones(&mesh, &BoneSkeleton::humanoid(1.85), &r),
+        distance_based_skinning_bones(&mesh, &rig, &r),
+    ] {
+        for (idx, w) in k.bone_indices.iter().zip(&k.weights) {
+            for i in idx {
+                out.extend_from_slice(&i.to_le_bytes());
+            }
+            for x in w {
+                out.extend_from_slice(&x.to_bits().to_le_bytes());
+            }
+        }
+    }
+    assert_golden(
+        "distance skinning",
+        &out,
+        "f1af01f2d25ced406c7c73e886af3951054b369c217f9de8d36b0b99e4a0814e",
     );
 }

@@ -9,7 +9,7 @@
 //!   Two builds with the same value read the same bytes as the same intents.
 //! - [`KIN_SEMANTICS_ID`]: the arithmetic this build computes intents with.
 //!   It folds every recorded scenario (the packet format, the quintic
-//!   trajectory and the arm inverse kinematics) and the identifier of each
+//!   trajectory, the arm inverse kinematics and distance skinning) and the identifier of each
 //!   `alice-det-math` function the crate calls ([`DET_MATH_PINS`]), not
 //!   det-math's whole identifier, so a function it does not call moves
 //!   nothing. Two builds with the same value compute every pinned scenario to
@@ -32,7 +32,7 @@
 //!
 //! ```text
 //! KIN_WIRE_SEMANTICS_ID d5ae6ab1fdf22312e9c0c6a99d1ea6ab26c218897d2ae045658bfe3decef31ca
-//! KIN_SEMANTICS_ID      edf156ec3f794d7a30dd996b7c4b7a484172650c4c02c93c899522863fbebc77
+//! KIN_SEMANTICS_ID      c54aef31de6783e85c8f68b67f78b61b4d2fef70b47f69c39e1ded02aa4a379e
 //! ```
 //!
 //! # Independent of cargo features
@@ -123,6 +123,10 @@ pub const KIN_SEMANTICS_PINS: &[(&str, [u8; 32])] = &[
         "arm inverse kinematics",
         hex32("38be74d7e546d5e69a4e89236fe6a670804f5f6ead3cfeb62763a630746900c2"),
     ),
+    (
+        "distance skinning",
+        hex32("f1af01f2d25ced406c7c73e886af3951054b369c217f9de8d36b0b99e4a0814e"),
+    ),
 ];
 
 /// The functions of `alice-det-math` this crate calls (ALICE-Law's
@@ -159,7 +163,7 @@ pub const KIN_SEMANTICS_CHECKED_AT: (&str, &str) = ("0.4.0", "1.98.1");
 /// [`KIN_SEMANTICS_PINS`] and [`DET_MATH_PINS`] (each under `det-math
 /// <function>`) described in the [module documentation](self)
 pub const KIN_SEMANTICS_ID: [u8; 32] =
-    hex32("edf156ec3f794d7a30dd996b7c4b7a484172650c4c02c93c899522863fbebc77");
+    hex32("c54aef31de6783e85c8f68b67f78b61b4d2fef70b47f69c39e1ded02aa4a379e");
 
 /// Earlier values of [`KIN_SEMANTICS_ID`] whose builds compute every pinned
 /// scenario to the same bits as this one (none yet)

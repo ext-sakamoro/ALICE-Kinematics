@@ -317,7 +317,7 @@ fn check_entries(pins: &[(&str, [u8; 32])], minimum: usize) {
 
 #[test]
 fn every_semantics_entry_is_the_golden_its_scenario_records() {
-    check_entries(KIN_SEMANTICS_PINS, 5);
+    check_entries(KIN_SEMANTICS_PINS, 6);
     // and the other way: every recorded golden is folded into the semantics
     // identifier (the wire table is the packet subset by design)
     for name in recorded_goldens().keys() {
@@ -393,7 +393,7 @@ fn the_identifiers_are_the_folds_of_their_tables() {
 fn the_identifiers_are_the_recorded_values() {
     assert_eq!(
         hex(&KIN_SEMANTICS_ID),
-        "edf156ec3f794d7a30dd996b7c4b7a484172650c4c02c93c899522863fbebc77"
+        "c54aef31de6783e85c8f68b67f78b61b4d2fef70b47f69c39e1ded02aa4a379e"
     );
     assert_eq!(
         hex(&KIN_WIRE_SEMANTICS_ID),
