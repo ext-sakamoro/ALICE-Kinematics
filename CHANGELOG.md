@@ -4,6 +4,10 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `bones` module: 名前を持つ骨の骨格 `BoneSkeleton` (骨の数は任意 (1〜65,536)、親は自分より前の骨、骨ごとに自分の head → tail の区間と距離 skinning の影響半径の種類 `BoneClass::{Limb, Torso}`) `from_world` (world の head / tail をそのまま) と `from_offsets` (親の tail + `head_offset` が head、head + `tail_offset` が tail、index 順の平行移動の FK) で作り、空・空の名前・重複した名前・前にない親・65,536 を超える数を `BoneSkeletonError` で断る 22 関節の humanoid は preset (`BoneSkeleton::humanoid` / `from_skeleton`: 関節 i の骨は親の関節 → i の区間で名前は `BoneId::name`、根は点) `BoneId::name` / `BoneId::is_limb` を公開 保存する座標の NaN は正準の NaN (G4)
+- `autorig::distance_based_skinning_bones`: 名前を持つ骨の skinning (各骨の自分の区間との距離、上位 4 本、`1 / (d² + 1e-6)` で正規化、半径外の頂点は骨 0) 支え骨・指・服の骨に重みを置ける `distance_based_skinning` (22 関節の `Skeleton`) はこの関数を humanoid preset で呼ぶ形にした 出力は前と bit 一致 (試験 `tests/named_bones.rs`: 格子 8,325 点の出力の SHA-256 を変更前の build で記録し、身長 1.70 / 1.85 で一致) ほかの試験: 60 本の鎖の FK が閉形式と bit 一致、枝分かれ、2 本の骨の重みが逆二乗の式どおり、支え骨が自分の区間の重みを取る、preset の名前・親・区間、断る入力、NaN の骨は重みを取らない 変異 5 件 (FK を親の head から、skinning を親の tail → 自分の tail で、preset の head と tail の入れ替え、自分を親に許す、limb の半径を胴の半径に) はすべて失敗する 識別子は動かない (`KIN_SEMANTICS_ID` が畳む場面は packet・軌道・腕の IK で、skinning は含まない)
+
 ### Changed
 - `alice-law-conformance.toml` の G6 の証跡を関数ごとの det-math の pin (`DET_MATH_FUNCTIONS` / `DET_MATH_PINS` / `assert_function_pins` と試験 `the_det_math_pins_name_exactly_the_functions_called`) に向け直し、記録した識別子を edf156ec に、確かめた版を 0.4.0 にした
 - **Breaking** (識別子): alice-det-math を git の main (0.6) で取り、`KIN_SEMANTICS_ID` は det-math 全体の識別子でなく、この crate が呼ぶ関数 (`DET_MATH_FUNCTIONS` = clamp / max / min) の識別子 (`DET_MATH_PINS`、`assert_function_pins` で compile 時に照合) を `det-math <関数>` の名前で畳む `a16cac34…` から `edf156ec…` に (前の値は持たない: det-math 0.6 の `clamp` は ALICE-Law G2 の順で `clamp(-0, +0, 1)` が `+0` になり、`HandModel::grip(-0.0)` の関節は -0 から +0 に変わる、試験 `tests/law_max_min_ties.rs::grip_of_negative_zero_is_grip_of_positive_zero`) `KIN_SEMANTICS_BY_DET_MATH` と `semantics_id_for` を外した alice-lol (feature `lol`) も git の main で取る

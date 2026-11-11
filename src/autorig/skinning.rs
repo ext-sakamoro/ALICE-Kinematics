@@ -16,8 +16,9 @@
 //! Author: Moroya Sakamoto
 
 use super::slice::MeshView;
+use crate::bones::{BoneClass, BoneSkeleton};
 use crate::joint::Vec3k;
-use crate::skeleton::{BoneId, Skeleton};
+use crate::skeleton::Skeleton;
 use alloc::vec::Vec;
 
 /// スキニング結果 (頂点数 × 4 の bone index + weight)
@@ -53,28 +54,6 @@ impl Default for InfluenceRadii {
     }
 }
 
-/// 手足ボーンか判定 (bone-specific radius 判定用)
-#[must_use]
-fn is_limb(bone_id: BoneId) -> bool {
-    matches!(
-        bone_id,
-        BoneId::LeftUpperArm
-            | BoneId::LeftLowerArm
-            | BoneId::LeftHand
-            | BoneId::RightUpperArm
-            | BoneId::RightLowerArm
-            | BoneId::RightHand
-            | BoneId::LeftUpperLeg
-            | BoneId::LeftLowerLeg
-            | BoneId::LeftFoot
-            | BoneId::LeftToe
-            | BoneId::RightUpperLeg
-            | BoneId::RightLowerLeg
-            | BoneId::RightFoot
-            | BoneId::RightToe
-    )
-}
-
 /// 点 p から線分 (a, b) への距離の 2 乗
 #[must_use]
 pub fn point_to_segment_distance_sq(p: Vec3k, a: Vec3k, b: Vec3k) -> f32 {
@@ -90,23 +69,38 @@ pub fn point_to_segment_distance_sq(p: Vec3k, a: Vec3k, b: Vec3k) -> f32 {
     (p - closest).length_sq()
 }
 
-/// 距離ベーススキニングを計算
+/// 距離ベーススキニングを計算 (22 関節の [`Skeleton`])
 ///
-/// 各頂点について:
-/// 1. 全 bone segment (parent.world → self.world) との距離を計算
-/// 2. bone 種別ごとの影響半径 (limb / torso) 内の bone のみ候補に残す
-/// 3. top-4 の bone を距離順に選択
-/// 4. 重み = 1 / (d² + ε)、正規化して合計を 1.0 に
-///
-/// 全 bone が影響半径外の孤立頂点は Hips (index 0) に 100% 割り当てる
+/// [`distance_based_skinning_bones`] on [`BoneSkeleton::from_skeleton`]: joint `i`'s segment is
+/// parent → `i` and its weight goes to joint `i`, the root is a point, and the indices are joint
+/// indices. 全 bone が影響半径外の孤立頂点は Hips (index 0) に 100% 割り当てる
 #[must_use]
-#[allow(clippy::cast_possible_truncation)]
 pub fn distance_based_skinning(
     mesh: &MeshView,
     skeleton: &Skeleton,
     radii: &InfluenceRadii,
 ) -> Skinning {
-    let height = skeleton.height;
+    distance_based_skinning_bones(mesh, &BoneSkeleton::from_skeleton(skeleton), radii)
+}
+
+/// 距離ベーススキニングを計算 (named bones)
+///
+/// 各頂点について:
+/// 1. 全 bone の segment (自分の head → tail) との距離を計算
+/// 2. bone の class ごとの影響半径 (`limb_max` / `torso_max` × height) 内の bone のみ候補に残す
+/// 3. top-4 の bone を距離順に選択 (同じ距離は bone index の順)
+/// 4. 重み = 1 / (d² + ε)、ε = 1e-6、正規化して合計を 1.0 に
+///
+/// The indices are bone indices of `skeleton`. 全 bone が影響半径外の孤立頂点は bone 0 に 100%
+/// 割り当てる
+#[must_use]
+#[allow(clippy::cast_possible_truncation)]
+pub fn distance_based_skinning_bones(
+    mesh: &MeshView,
+    skeleton: &BoneSkeleton,
+    radii: &InfluenceRadii,
+) -> Skinning {
+    let height = skeleton.height();
     // powi(2) は std 依存、no_std のため x * x に展開
     let limb_max = radii.limb_max * height;
     let torso_max = radii.torso_max * height;
@@ -121,20 +115,14 @@ pub fn distance_based_skinning(
 
     for &v in mesh.vertices {
         // 各 bone との距離を計算し、影響半径内のものを候補に
-        let mut dists: Vec<(f32, u16)> = Vec::with_capacity(skeleton.joints.len());
-        for (i, joint) in skeleton.joints.iter().enumerate() {
-            let dist_sq = if let Some(parent_idx) = joint.parent {
-                let a = skeleton.joints[parent_idx].world_position;
-                let b = joint.world_position;
-                point_to_segment_distance_sq(v, a, b)
-            } else {
-                // ルート (Hips) は点距離
-                (v - joint.world_position).length_sq()
-            };
-            let max_sq = if is_limb(joint.id) {
-                limb_max_sq
-            } else {
-                torso_max_sq
+        let mut dists: Vec<(f32, u16)> = Vec::with_capacity(skeleton.len());
+        for (i, bone) in skeleton.bones().iter().enumerate() {
+            // a bone whose head and tail coincide (the humanoid root) is a point: the segment
+            // distance of a zero-length segment is the distance to its head
+            let dist_sq = point_to_segment_distance_sq(v, bone.head(), bone.tail());
+            let max_sq = match bone.class() {
+                BoneClass::Limb => limb_max_sq,
+                BoneClass::Torso => torso_max_sq,
             };
             // a NaN distance (a NaN coordinate) is out of range, not a candidate (`>` alone
             // would let it through)
@@ -181,7 +169,7 @@ pub fn distance_based_skinning(
         let normalized: [f32; 4] = if sum > 0.0 {
             [raw[0] / sum, raw[1] / sum, raw[2] / sum, raw[3] / sum]
         } else {
-            // 影響半径外の孤立頂点 → Hips に 100%
+            // 影響半径外の孤立頂点 → bone 0 に 100%
             [1.0, 0.0, 0.0, 0.0]
         };
 
@@ -203,7 +191,7 @@ pub fn distance_based_skinning(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::skeleton::Skeleton;
+    use crate::skeleton::{BoneId, Skeleton};
 
     #[test]
     fn segment_distance_sq_endpoint() {
@@ -246,15 +234,15 @@ mod tests {
 
     #[test]
     fn is_limb_hand() {
-        assert!(is_limb(BoneId::LeftHand));
-        assert!(is_limb(BoneId::RightHand));
+        assert!(BoneId::is_limb(BoneId::LeftHand));
+        assert!(BoneId::is_limb(BoneId::RightHand));
     }
 
     #[test]
     fn is_limb_hips() {
-        assert!(!is_limb(BoneId::Hips));
-        assert!(!is_limb(BoneId::Chest));
-        assert!(!is_limb(BoneId::Head));
+        assert!(!BoneId::is_limb(BoneId::Hips));
+        assert!(!BoneId::is_limb(BoneId::Chest));
+        assert!(!BoneId::is_limb(BoneId::Head));
     }
 
     #[test]

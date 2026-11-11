@@ -44,6 +44,7 @@ extern crate std;
 extern crate alloc;
 
 pub mod autorig;
+pub mod bones;
 pub mod hand;
 pub mod intent;
 pub mod joint;
