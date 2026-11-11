@@ -32,7 +32,7 @@
 //!
 //! ```text
 //! KIN_WIRE_SEMANTICS_ID d5ae6ab1fdf22312e9c0c6a99d1ea6ab26c218897d2ae045658bfe3decef31ca
-//! KIN_SEMANTICS_ID      c54aef31de6783e85c8f68b67f78b61b4d2fef70b47f69c39e1ded02aa4a379e
+//! KIN_SEMANTICS_ID      5298ae40c4c79b2bdecd0691fe7642b553937a8b2895fc8af0c4a8375fbde16e
 //! ```
 //!
 //! # Independent of cargo features
@@ -125,7 +125,7 @@ pub const KIN_SEMANTICS_PINS: &[(&str, [u8; 32])] = &[
     ),
     (
         "distance skinning",
-        hex32("f1af01f2d25ced406c7c73e886af3951054b369c217f9de8d36b0b99e4a0814e"),
+        hex32("23c41b0ce220a5e07adcb4bb84a11001b2e16e781276a686210ea6d33c1b321c"),
     ),
 ];
 
@@ -163,7 +163,7 @@ pub const KIN_SEMANTICS_CHECKED_AT: (&str, &str) = ("0.4.0", "1.98.1");
 /// [`KIN_SEMANTICS_PINS`] and [`DET_MATH_PINS`] (each under `det-math
 /// <function>`) described in the [module documentation](self)
 pub const KIN_SEMANTICS_ID: [u8; 32] =
-    hex32("c54aef31de6783e85c8f68b67f78b61b4d2fef70b47f69c39e1ded02aa4a379e");
+    hex32("5298ae40c4c79b2bdecd0691fe7642b553937a8b2895fc8af0c4a8375fbde16e");
 
 /// Earlier values of [`KIN_SEMANTICS_ID`] whose builds compute every pinned
 /// scenario to the same bits as this one (none yet)

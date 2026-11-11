@@ -23,7 +23,7 @@ use alloc::vec::Vec;
 
 /// スキニング結果 (頂点数 × 4 の bone index + weight)
 ///
-/// 重みは top-4 の合計が 1.0 (孤立頂点で全 bone が影響範囲外の場合は Hips に 100%)
+/// 重みは top-4 の合計が 1.0 (全 bone が影響範囲外の頂点は最も近い bone に 100%)
 #[derive(Debug, Clone)]
 pub struct Skinning {
     /// 頂点 i の影響 bone インデックス (skeleton.joints への index) top-4
@@ -73,7 +73,7 @@ pub fn point_to_segment_distance_sq(p: Vec3k, a: Vec3k, b: Vec3k) -> f32 {
 ///
 /// [`distance_based_skinning_bones`] on [`BoneSkeleton::from_skeleton`]: joint `i`'s segment is
 /// parent → `i` and its weight goes to joint `i`, the root is a point, and the indices are joint
-/// indices. 全 bone が影響半径外の孤立頂点は Hips (index 0) に 100% 割り当てる
+/// indices. 全 bone が影響半径外の頂点は最も近い bone に 100% 割り当てる
 #[must_use]
 pub fn distance_based_skinning(
     mesh: &MeshView,
@@ -91,8 +91,8 @@ pub fn distance_based_skinning(
 /// 3. top-4 の bone を距離順に選択 (同じ距離は bone index の順)
 /// 4. 重み = 1 / (d² + ε)、ε = 1e-6、正規化して合計を 1.0 に
 ///
-/// The indices are bone indices of `skeleton`. 全 bone が影響半径外の孤立頂点は bone 0 に 100%
-/// 割り当てる
+/// The indices are bone indices of `skeleton`. 全 bone が影響半径外の頂点は区間の距離が最も近い bone
+/// (同じ距離は index の小さい方) に 100%、距離がすべて NaN の頂点だけ bone 0 に 100%
 #[must_use]
 #[allow(clippy::cast_possible_truncation)]
 pub fn distance_based_skinning_bones(
@@ -116,6 +116,9 @@ pub fn distance_based_skinning_bones(
     for &v in mesh.vertices {
         // 各 bone との距離を計算し、影響半径内のものを候補に
         let mut dists: Vec<(f32, u16)> = Vec::with_capacity(skeleton.len());
+        // the nearest bone whatever its radius (the first of equal distances), for a vertex no
+        // bone's radius reaches
+        let mut nearest: Option<(f32, u16)> = None;
         for (i, bone) in skeleton.bones().iter().enumerate() {
             // a bone whose head and tail coincide (the humanoid root) is a point: the segment
             // distance of a zero-length segment is the distance to its head
@@ -126,10 +129,26 @@ pub fn distance_based_skinning_bones(
             };
             // a NaN distance (a NaN coordinate) is out of range, not a candidate (`>` alone
             // would let it through)
-            if dist_sq.is_nan() || dist_sq > max_sq {
+            if dist_sq.is_nan() {
+                continue;
+            }
+            if nearest.is_none_or(|(d, _)| dist_sq < d) {
+                nearest = Some((dist_sq, i as u16));
+            }
+            if dist_sq > max_sq {
                 continue;
             }
             dists.push((dist_sq, i as u16));
+        }
+
+        // no bone's radius reaches the vertex: it follows its nearest bone at 100% (a sole or toe
+        // vertex just past the radius stays with the foot, not with bone 0)
+        if dists.is_empty() {
+            if let Some((_, i)) = nearest {
+                bone_indices.push([i, 0, 0, 0]);
+                weights.push([1.0, 0.0, 0.0, 0.0]);
+                continue;
+            }
         }
 
         // 距離昇順ソート、top-4 を取る
@@ -169,7 +188,8 @@ pub fn distance_based_skinning_bones(
         let normalized: [f32; 4] = if sum > 0.0 {
             [raw[0] / sum, raw[1] / sum, raw[2] / sum, raw[3] / sum]
         } else {
-            // 影響半径外の孤立頂点 → bone 0 に 100%
+            // every distance is NaN (a NaN vertex or skeleton): no bone is nearer than another,
+            // bone 0 at 100%
             [1.0, 0.0, 0.0, 0.0]
         };
 
@@ -309,14 +329,31 @@ mod tests {
     }
 
     #[test]
-    fn skinning_isolated_vertex_falls_back_to_hips() {
-        // 骨格から遠く離れた頂点 → 全 bone が影響半径外 → Hips (index 0) に 100%
+    fn skinning_isolated_vertex_follows_its_nearest_bone() {
+        // 骨格から遠く離れた頂点 → 全 bone が影響半径外 → 区間の距離が最も近い bone に 100%
         let skel = Skeleton::default_humanoid();
-        let verts = alloc::vec![Vec3k::new(100.0, 100.0, 100.0)];
+        let v = Vec3k::new(100.0, 100.0, 100.0);
+        let verts = alloc::vec![v];
         let mesh = MeshView::from_vertices(&verts);
         let sk = distance_based_skinning(&mesh, &skel, &InfluenceRadii::default());
-        assert_eq!(sk.bone_indices[0][0], 0); // Hips index
-        assert!((sk.weights[0][0] - 1.0).abs() < 1e-4);
+        // the nearest joint segment, searched here over parent → joint segments (the root is a
+        // point), the first of equal distances
+        let mut best = (f32::INFINITY, 0usize);
+        for (i, j) in skel.joints.iter().enumerate() {
+            let a = j
+                .parent
+                .map_or(j.world_position, |p| skel.joints[p].world_position);
+            let d = point_to_segment_distance_sq(v, a, j.world_position);
+            if d < best.0 {
+                best = (d, i);
+            }
+        }
+        assert_ne!(
+            best.1, 0,
+            "the far vertex must not be nearest to the root here"
+        );
+        assert_eq!(usize::from(sk.bone_indices[0][0]), best.1);
+        assert!((sk.weights[0][0] - 1.0).abs() < 1e-6);
     }
 
     #[test]

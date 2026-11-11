@@ -8,7 +8,9 @@
 //! - skinning on named bones weights each bone by its own head → tail segment, by the
 //!   closed-form inverse-square rule.
 
-use alice_kinematics::autorig::{distance_based_skinning, InfluenceRadii, MeshView, Skinning};
+use alice_kinematics::autorig::{
+    distance_based_skinning, point_to_segment_distance_sq, InfluenceRadii, MeshView, Skinning,
+};
 use alice_kinematics::skeleton::Skeleton;
 use alice_kinematics::Vec3k;
 use sha2::{Digest, Sha256};
@@ -50,23 +52,68 @@ fn digest(s: &Skinning) -> String {
     })
 }
 
-/// Recorded on main 3250992 (before named bones): `distance_based_skinning` of the lattice on
-/// the 1.70 m and 1.85 m humanoids with the default radii.
+/// Recorded on main 3250992 (before named bones, with the bone-0 fallback for a vertex no
+/// radius reaches): `distance_based_skinning` of the lattice on the 1.70 m and 1.85 m humanoids
+/// with the default radii.
 const GOLDEN_170: &str = "f3942ca2dcd874c5d7dca86b7ad74ccf7c4fddc8164da9c50be55deebcf429cb";
 const GOLDEN_185: &str = "8eaf760f8a9df2f59966b303baff8b2a1b0cb65fe58c3821744468b956ca3d0a";
 
+/// Recorded after the nearest-bone fallback: the same lattice and heights.
+const GOLDEN_170_NEAREST: &str = "322eb64d5ea70a9d0cbdc0a06dd719813cf71fb8c6b708c09681d69580a113a7";
+const GOLDEN_185_NEAREST: &str = "715ae4f24e2e5545a9d4f118b4bb79cfa307407f71f28ccfd532aba725d5f747";
+
+/// Whether some bone's influence radius reaches `v` (segment distance squared within
+/// `radius × height` squared), the condition under which the fallback is not used
+fn reached(v: Vec3k, s: &BoneSkeleton, r: InfluenceRadii) -> bool {
+    s.bones().iter().any(|b| {
+        let rad = match b.class() {
+            BoneClass::Limb => r.limb_max,
+            BoneClass::Torso => r.torso_max,
+        } * s.height();
+        point_to_segment_distance_sq(v, b.head(), b.tail()) <= rad * rad
+    })
+}
+
+/// The humanoid skins the lattice to the recorded digest, and only the vertices no radius reaches
+/// differ from the build before the nearest-bone fallback: putting the old fallback (bone 0 at
+/// 100%) back on exactly those vertices gives the digest recorded on that build.
 #[test]
 fn humanoid_skinning_is_bit_equal_to_the_recorded_build() {
     let verts = lattice();
     let mesh = MeshView::from_vertices(&verts);
     let r = InfluenceRadii::default();
-    let a = distance_based_skinning(&mesh, &Skeleton::with_height(1.70), &r);
-    let b = distance_based_skinning(&mesh, &Skeleton::with_height(1.85), &r);
-    assert_eq!(a.weights.len(), verts.len());
-    println!("GOLDEN_170 {}", digest(&a));
-    println!("GOLDEN_185 {}", digest(&b));
-    assert_eq!(digest(&a), GOLDEN_170);
-    assert_eq!(digest(&b), GOLDEN_185);
+    for (h, old, now) in [
+        (1.70, GOLDEN_170, GOLDEN_170_NEAREST),
+        (1.85, GOLDEN_185, GOLDEN_185_NEAREST),
+    ] {
+        let k = distance_based_skinning(&mesh, &Skeleton::with_height(h), &r);
+        assert_eq!(k.weights.len(), verts.len());
+        println!("GOLDEN_{h} nearest {}", digest(&k));
+        assert_eq!(digest(&k), now, "height {h}");
+        let bones = BoneSkeleton::humanoid(h);
+        let mut back = k.clone();
+        let mut moved = 0;
+        for (i, &v) in verts.iter().enumerate() {
+            if !reached(v, &bones, r) {
+                back.bone_indices[i] = [0; 4];
+                back.weights[i] = [1.0, 0.0, 0.0, 0.0];
+                moved += 1;
+            }
+        }
+        println!(
+            "height {h}: {moved} of {} vertices out of every radius",
+            verts.len()
+        );
+        assert!(
+            moved > 0,
+            "the lattice must hold vertices no radius reaches"
+        );
+        assert_eq!(
+            digest(&back),
+            old,
+            "height {h}: a vertex some radius reaches changed"
+        );
+    }
 }
 
 use alice_kinematics::autorig::distance_based_skinning_bones;
@@ -292,7 +339,7 @@ fn the_humanoid_preset_names_its_bones_after_the_joints() {
     let r = InfluenceRadii::default();
     assert_eq!(
         digest(&distance_based_skinning_bones(&mesh, &s, &r)),
-        GOLDEN_170
+        GOLDEN_170_NEAREST
     );
 }
 
@@ -361,6 +408,57 @@ fn a_nan_bone_is_canonical_and_takes_no_weight() {
     let k =
         distance_based_skinning_bones(&MeshView::from_vertices(&v), &s, &InfluenceRadii::default());
     assert_eq!(k.bone_indices[0][0], 0);
+    assert_eq!(
+        k.weights[0].map(f32::to_bits),
+        [1.0_f32, 0.0, 0.0, 0.0].map(f32::to_bits)
+    );
+}
+
+/// A vertex outside every influence radius follows the bone nearest to it (by segment distance)
+/// at 100%, not bone 0: a vertex 0.2 m beyond the left toe's tip, out of the limb radius
+/// (0.05 · 1.70 = 0.085 m) of every bone, follows the left toe.
+#[test]
+fn a_vertex_out_of_every_radius_follows_its_nearest_bone() {
+    let skel = Skeleton::with_height(1.70);
+    let toe = skel.joint_world_position(BoneId::LeftToe).unwrap();
+    let v = [Vec3k::new(toe.x, toe.y, toe.z + 0.2)];
+    let k = distance_based_skinning(
+        &MeshView::from_vertices(&v),
+        &skel,
+        &InfluenceRadii::default(),
+    );
+    assert_eq!(
+        k.bone_indices[0][0],
+        BoneId::LeftToe as u16,
+        "{:?}",
+        k.bone_indices[0]
+    );
+    assert_eq!(
+        k.weights[0].map(f32::to_bits),
+        [1.0_f32, 0.0, 0.0, 0.0].map(f32::to_bits)
+    );
+    // the same through named bones: a costume bone far from the rest takes its own stray vertex
+    let s = BoneSkeleton::from_world(
+        vec![
+            world("root", None, [0.0; 3], [0.0, 1.0, 0.0], BoneClass::Torso),
+            world(
+                "cape_tip",
+                Some(0),
+                [0.0, 1.0, -1.0],
+                [0.0, 0.0, -1.0],
+                BoneClass::Limb,
+            ),
+        ],
+        1.0,
+    )
+    .unwrap();
+    let far = [Vec3k::new(0.0, 0.5, -1.5)];
+    let k = distance_based_skinning_bones(
+        &MeshView::from_vertices(&far),
+        &s,
+        &InfluenceRadii::default(),
+    );
+    assert_eq!(k.bone_indices[0][0], 1);
     assert_eq!(
         k.weights[0].map(f32::to_bits),
         [1.0_f32, 0.0, 0.0, 0.0].map(f32::to_bits)

@@ -259,6 +259,6 @@ fn distance_skinning_is_the_recorded_bits() {
     assert_golden(
         "distance skinning",
         &out,
-        "f1af01f2d25ced406c7c73e886af3951054b369c217f9de8d36b0b99e4a0814e",
+        "23c41b0ce220a5e07adcb4bb84a11001b2e16e781276a686210ea6d33c1b321c",
     );
 }

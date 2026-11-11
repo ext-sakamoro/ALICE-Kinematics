@@ -4,6 +4,9 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Breaking** (挙動と識別子): 距離 skinning で、どの骨の影響半径も届かない頂点は区間の距離が最も近い骨に 100% で付く (以前は骨 0 = humanoid では Hips に 100% で、靴底やつま先の頂点が腰について動いた) 距離がすべて NaN の頂点だけ骨 0 に 100% `distance_based_skinning` / `distance_based_skinning_bones` の両方 試験 `a_vertex_out_of_every_radius_follows_its_nearest_bone` (左のつま先の先 0.2 m の頂点が左のつま先に付く、離れた服の骨が自分の近くの頂点を取る、修正前は失敗) 格子の試験は新しい出力を記録し、半径の届かない頂点 (身長 1.70 で 8,325 点中 5,757、1.85 で 5,347) だけを以前の骨 0 に戻すと修正前の build の SHA-256 に一致する (届く頂点は変わっていない) 場面 `distance skinning` は f1af01f2… から 23c41b0c… に、`KIN_SEMANTICS_ID` は c54aef31… から 5298ae40… に移った (`KIN_PREVIOUS_SEMANTICS_IDS` は空のまま)
+
 ### Added
 - `bones` module: 名前を持つ骨の骨格 `BoneSkeleton` (骨の数は任意 (1〜65,536)、親は自分より前の骨、骨ごとに自分の head → tail の区間と距離 skinning の影響半径の種類 `BoneClass::{Limb, Torso}`) `from_world` (world の head / tail をそのまま) と `from_offsets` (親の tail + `head_offset` が head、head + `tail_offset` が tail、index 順の平行移動の FK) で作り、空・空の名前・重複した名前・前にない親・65,536 を超える数を `BoneSkeletonError` で断る 22 関節の humanoid は preset (`BoneSkeleton::humanoid` / `from_skeleton`: 関節 i の骨は親の関節 → i の区間で名前は `BoneId::name`、根は点) `BoneId::name` / `BoneId::is_limb` を公開 保存する座標の NaN は正準の NaN (G4)
 - `autorig::distance_based_skinning_bones`: 名前を持つ骨の skinning (各骨の自分の区間との距離、上位 4 本、`1 / (d² + 1e-6)` で正規化、半径外の頂点は骨 0) 支え骨・指・服の骨に重みを置ける `distance_based_skinning` (22 関節の `Skeleton`) はこの関数を humanoid preset で呼ぶ形にした 出力は前と bit 一致 (試験 `tests/named_bones.rs`: 格子 8,325 点の出力の SHA-256 を変更前の build で記録し、身長 1.70 / 1.85 で一致) ほかの試験: 60 本の鎖の FK が閉形式と bit 一致、枝分かれ、2 本の骨の重みが逆二乗の式どおり、支え骨が自分の区間の重みを取る、preset の名前・親・区間、断る入力、NaN の骨は重みを取らない 変異 5 件 (FK を親の head から、skinning を親の tail → 自分の tail で、preset の head と tail の入れ替え、自分を親に許す、limb の半径を胴の半径に) はすべて失敗する 識別子は動かない (`KIN_SEMANTICS_ID` が畳む場面は packet・軌道・腕の IK で、skinning は含まない)
