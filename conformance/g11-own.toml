@@ -11,7 +11,7 @@
 [[row]]
 gate = "G2"
 checker = ".github/workflows/ci.yml#- name: cargo test (default, with the Law tests counted)>scripts/run_tests.sh"
-canary = "tests/law_max_min_ties.rs::grip_of_negative_zero_keeps_the_sign_of_zero"
+canary = "tests/law_max_min_ties.rs::grip_of_negative_zero_is_grip_of_positive_zero"
 zero = "scripts/test_run_tests.py::RunTests.test_a_named_file_that_ran_zero_fails"
 shared = ["scripts/run_tests.sh", "scripts/test_run_tests.py"]
 
