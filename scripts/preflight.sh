@@ -96,6 +96,17 @@ cargo test --quiet --locked --manifest-path tools/no-outer-fneg-of-fma/Cargo.tom
 cargo run --quiet --locked --release --manifest-path tools/no-outer-fneg-of-fma/Cargo.toml -- --root .
 python3 scripts/test_changed_paths.py
 
+step "ci.yml / test: ALICE-Law G11 self-check (the four G11 checks at the pinned revision)"
+(
+  set -euo pipefail
+  rev=$(awk '$1 == "rev" { print $2 }' .github/shared-files-pin)
+  law=$(mktemp -d)
+  trap 'rm -rf "$law"' EXIT
+  git -c core.autocrlf=false clone --quiet --filter=blob:none https://github.com/ext-sakamoro/ALICE-Law.git "$law/alice-law"
+  git -C "$law/alice-law" checkout --quiet --detach "$rev"
+  python3 "$law/alice-law/scripts/g11_self_check.py" --repo . --name ALICE-Kinematics
+)
+
 if [[ $quick -eq 1 ]]; then
   echo; echo "preflight --quick OK (test / bench suites skipped)"; exit 0
 fi

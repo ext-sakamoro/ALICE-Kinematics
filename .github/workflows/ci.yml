@@ -51,6 +51,17 @@ jobs:
             echo "FAIL: rerun present in library dependency tree"; exit 1
           fi
           echo "OK: no rerun in $n dependency lines (all features)"
+      # ALICE-Law G11: ALICE-Law's own self-check at the pinned revision (table, rows, shared copies, own copies
+      # at their targets, manifest and its anchors), on every OS of the matrix
+      - name: ALICE-Law G11 self-check (the four G11 checks at the pinned revision)
+        working-directory: ALICE-Kinematics
+        shell: bash
+        run: |
+          rev=$(awk '$1 == "rev" { print $2 }' .github/shared-files-pin)
+          git -c core.autocrlf=false clone --quiet --filter=blob:none https://github.com/ext-sakamoro/ALICE-Law.git "$RUNNER_TEMP/alice-law"
+          git -C "$RUNNER_TEMP/alice-law" checkout --quiet --detach "$rev"
+          PY=$(command -v python3 || command -v python)
+          "$PY" "$RUNNER_TEMP/alice-law/scripts/g11_self_check.py" --repo . --name ALICE-Kinematics
 
   release:
     # ALICE-Law G5: the whole test suite under the release profile, on x86_64 (ubuntu) and
