@@ -19,15 +19,3 @@
 #        must match one of them; a pre-release matches only a range that names a
 #        pre-release of the same release. Empty when no version is safe: then every
 #        version in Cargo.lock must be held.
-
-# bincode is unmaintained (no safe version). It comes from alice-sdf (the alice-lol
-# feature, through the pinned siblings); the hold ends when that crate replaces it.
-[[hold]]
-id = "RUSTSEC-2025-0141"
-kind = "unmaintained"
-crate = "bincode"
-version = "2.0.1"
-dependents = ["alice-sdf 7.0.0"]
-fixed = []
-expires = "2026-11-14"
-until = "alice-sdf replaces bincode"

@@ -4,6 +4,16 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- 共有 file を ALICE-Law の表の bytes へ: `.github/workflows/public-text.yml` / `scripts/public_text.sh` / `scripts/test_public_text.py` (workflow は checkout の branch を読み `--new-since` で新しい commit を読む、`.github/public-text-pin` を同時に移す)
+- `scripts/fneg_fma_ir_check.py` と試験: 自分の build 先を片付ける版へ
+- `scripts/id_move_check.py` と試験、`scripts/sibling_coverage_guard.py` と試験、`scripts/test_shared_files.py` を表の bytes へ `.github/shared-files-pin` と G11 の note を移す
+- CI: `actions/cache` を v6 へ (v5 は node20 で actionlint が error にする)
+
+### Security
+- `scripts/advisory_hold_guard.py` と試験を ALICE-Law の表の bytes へ: hold に `reason` と `until_release` を求め、上流の新しい release が出たら fail、何も無視していない時の空の hold を通し、deny.toml の `unused-ignored-advisory = "deny"` と cargo audit の `--ignore` に必ず hold を求める
+- bincode 2.0.1 (RUSTSEC-2025-0141、保守されていない) の hold と deny.toml の無視を外す alice-lol main (e21b5c2) が alice-sdf を bincode を引かない版にしたので、依存の graph に bincode が無い
+
 ### Fixed
 - **Breaking** (挙動と識別子): 距離 skinning で、どの骨の影響半径も届かない頂点は区間の距離が最も近い骨に 100% で付く (以前は骨 0 = humanoid では Hips に 100% で、靴底やつま先の頂点が腰について動いた) 距離がすべて NaN の頂点だけ骨 0 に 100% `distance_based_skinning` / `distance_based_skinning_bones` の両方 試験 `a_vertex_out_of_every_radius_follows_its_nearest_bone` (左のつま先の先 0.2 m の頂点が左のつま先に付く、離れた服の骨が自分の近くの頂点を取る、修正前は失敗) 格子の試験は新しい出力を記録し、半径の届かない頂点 (身長 1.70 で 8,325 点中 5,757、1.85 で 5,347) だけを以前の骨 0 に戻すと修正前の build の SHA-256 に一致する (届く頂点は変わっていない) 場面 `distance skinning` は f1af01f2… から 23c41b0c… に、`KIN_SEMANTICS_ID` は c54aef31… から 5298ae40… に移った (`KIN_PREVIOUS_SEMANTICS_IDS` は空のまま)
 
