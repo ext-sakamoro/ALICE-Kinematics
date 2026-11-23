@@ -154,8 +154,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "alice-det-math"
+version = "0.6.1"
+source = "git+https://github.com/ext-sakamoro/ALICE-DetMath?branch=main#702f24acd304c0e328424693e929d499ff0a2bbe"
+
+[[package]]
 name = "alice-kinematics"
-version = "0.2.1"
+version = "0.4.0"
+dependencies = [
+ "alice-det-math",
+]
 
 [[package]]
 name = "alice-kinematics-rerun-viz"

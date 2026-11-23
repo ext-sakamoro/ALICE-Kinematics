@@ -5,6 +5,7 @@ All notable changes to ALICE-Kinematics will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- `examples/rerun-viz/Cargo.lock`: alice-kinematics を 0.4.0 に、その依存の alice-det-math (main 702f24ac) を足す (manifest と食い違っていた、`cargo update -p alice-kinematics` の範囲だけ)
 - `scripts/fneg_fma_ir_check.py` / `scripts/test_fneg_fma_ir_check.py` を ALICE-Law の表の target の bytes へ、`.github/shared-files-pin` を ALICE-Law 4bb6b50 へ (crate の .ll を固定の release/deps でなく cargo の compiler-artifact の知らせから見つける 週次の g3-ir で .ll が 0 件になっていた)
 - 共有 file を ALICE-Law の表の bytes へ: `.github/workflows/public-text.yml` / `scripts/public_text.sh` / `scripts/test_public_text.py` (workflow は checkout の branch を読み `--new-since` で新しい commit を読む、`.github/public-text-pin` を同時に移す)
 - `scripts/fneg_fma_ir_check.py` と試験: 自分の build 先を片付ける版へ
